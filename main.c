@@ -87,13 +87,11 @@ int main(int argc, char* argv[]) {
             strcpy(susd, argv[4]);
             strtoupper(susd);
             
-            printf("%s\n", susd);
             char ea = 0;
             if(susd[ulen-2] == 'E' && susd[ulen-1] == 'A'){
                 ea = 1;
                 susd[ulen-2] = '\0';
             }
-            printf("%s\n", susd);
             
             double usd = strtod(susd, NULL);
             if(ea) usd *= qty;
