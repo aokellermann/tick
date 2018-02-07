@@ -87,6 +87,8 @@ int main(int argc, char* argv[]) {
             strcpy(susd, argv[4]);
             strtoupper(susd);
             
+            // If last two characters of price are "EA", calculate
+            // total price with number of units
             char ea = 0;
             if(susd[ulen-2] == 'E' && susd[ulen-1] == 'A'){
                 ea = 1;
