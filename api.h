@@ -1,7 +1,6 @@
 /**
- * API data is taken from IEX Trading, Morningstar, and Coinmarketcap.
+ * API data is taken from IEX Trading, and Coinmarketcap.
  * https://iextrading.com/developer/docs/
- * http://www.morningstar.com/
  * https://coinmarketcap.com/api/documentation/v1
  */
 
@@ -9,8 +8,7 @@
 #define TICK_API_H
 
 typedef enum api_providers {
-    API_PROVIDER_IEX, API_PROVIDER_MORNINGSTAR,
-    API_PROVIDER_ALPHAVANTAGE, API_PROVIDER_COINMARKETCAP
+    API_PROVIDER_IEX, API_PROVIDER_ALPHAVANTAGE, API_PROVIDER_COINMARKETCAP
 } Api_Provider;
 
 typedef enum data_level {
@@ -55,7 +53,7 @@ typedef struct news_article {
 typedef struct info_array Info_Array;
 
 typedef struct info {
-    int api_provider;                   // IEX, MORNINGSTAR, ALPHAVANTAGE, COINMARKETCAP
+    int api_provider;                   // IEX, ALPHAVANTAGE, COINMARKETCAP
     /** API DATA **/
 
     /* Company */
@@ -235,15 +233,6 @@ void api_iex_store_info(Info* pInfo, Data_Level data_level);
  */
 String* api_iex_get_data_string(char** symbol_array, size_t len,
                                 Data_Level data_level);
-/**
- * Designed for threading
- *
- * Queries Morningstar's API and stores the data in the Info object pointed to by vpInfo. change_1d,
- * change_7d, change_30d, points, and volume_1d are stored.
- * @param vpInfo Info*
- * @return vpInfo on success, NULL on error
- */
-void* api_morningstar_store_info(void* vpInfo);
 
 /**
  * Designed for threading

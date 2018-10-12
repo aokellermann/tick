@@ -107,8 +107,7 @@ Once installed, you may read the man page for more information.
 MIT License
 
 Stock information is taken from IEX's free API. Mutual fund and
-over-the-counter information is taken from and Morningstar and AlphaVantage's
-free API.
+over-the-counter information is taken from AlphaVantage's free API.
 Cryptocurrency information is taken from Coinmarketcap's free API.
 Please do not abuse the APIs by repeatedly requesting information. Read
 the provided license for more information.

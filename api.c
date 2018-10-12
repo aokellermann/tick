@@ -233,54 +233,6 @@ String* api_iex_get_data_string(char** symbol_array, size_t len,
     return string_array[0];
 }
 
-void* api_morningstar_store_info(void* vpInfo) {
-    Info* symbol_info = vpInfo;
-    char today_str[DATE_MAX_LENGTH], five_year_str[DATE_MAX_LENGTH], morningstar_api_string[URL_MAX_LENGTH];
-    time_t now = time(NULL);
-    struct tm* ts = localtime(&now);
-    mktime(ts);
-    strftime(today_str, DATE_MAX_LENGTH, "%Y-%m-%d", ts);
-    ts->tm_year -= 5; //get info from past 5 years
-    mktime(ts);
-    strftime(five_year_str, DATE_MAX_LENGTH, "%Y-%m-%d", ts);
-    sprintf(morningstar_api_string,
-            "http://globalquote.morningstar.com/globalcomponent/RealtimeHistoricalStockData.ashx?showVol=true&dtype=his"
-            "&f=d&curry=USD&isD=true&isS=true&hasF=true&ProdCode=DIRECT&ticker=%s&range=%s|%s",
-            symbol_info->symbol, five_year_str, today_str);
-    String* pString = api_curl_url(morningstar_api_string);
-    if (pString == NULL)
-        return NULL;
-
-    if (streq("null", pString->data)) { // Invalid symbol
-        string_destroy(&pString);
-        return NULL;
-    }
-
-    symbol_info->api_provider = API_PROVIDER_MORNINGSTAR;
-
-    Json* jobj = json_tokener_parse(pString->data);
-    Json* datapoints = json_object_object_get(
-            json_object_array_get_idx(json_object_object_get(jobj, "PriceDataList"), 0), "Datapoints");
-    size_t len = json_object_array_length(datapoints);
-    double* api_data = calloc(len + 1, sizeof(double)); // Must calloc() because some data points don't exist
-    pointer_alloc_check(api_data);
-    for (int i = 0; i < (int) len; i++)
-        api_data[i] = json_object_get_double(
-                json_object_array_get_idx(json_object_array_get_idx(datapoints, (size_t) i), 0));
-    symbol_info->points = api_data;
-    symbol_info->price = api_data[len - 1];
-    symbol_info->price_last_close = api_data[len - 2];
-    symbol_info->price_7d = api_data[len - 6];
-    symbol_info->price_30d = api_data[len - 22];
-    Json* vol = json_object_object_get(jobj, "VolumeList");
-    if (vol != NULL) // There is no volume for MUTF
-        symbol_info->volume_1d = (long) (1000000 * json_object_get_double( // Data listed in millions
-                json_object_array_get_idx(json_object_object_get(vol, "Datapoints"), len - 1)));
-    json_object_put(jobj);
-    string_destroy(&pString);
-    return vpInfo;
-}
-
 void* api_alphavantage_store_info(void* vpInfo) {
     Info* symbol_info = vpInfo;
     if (symbol_info->symbol[0] == '\0')
