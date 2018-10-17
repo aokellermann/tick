@@ -54,6 +54,13 @@ typedef struct json_object Json;
 String* string_init(void);
 
 /**
+ * Creates and returns a String object containing the input string.
+ * @param string input
+ * @return String*
+ */
+String* string_init_c_string(const char* string);
+
+/**
  * Changes letters in a string to lowercase in place
  * @param str the string
  */

@@ -9,6 +9,16 @@ String* string_init(void) {
     return pString;
 }
 
+String* string_init_c_string(const char* string) {
+    String* pString = (String*) malloc(sizeof(String));
+    pointer_alloc_check(pString);
+    pString->len = strlen(string);
+    pString->data = malloc(sizeof(char) * strlen(string) + 1);
+    pointer_alloc_check(pString->data);
+    strcpy(pString->data, string);
+    return pString;
+}
+
 void strtolower(char* str) {
     for (int i = 0; str[i] != '\0'; i++)
         str[i] = (char) tolower(str[i]);
