@@ -161,7 +161,7 @@ int csv_goto_next_value(String* pString, size_t* idx) {
 }
 
 size_t string_get_num_lines(String* pString) {
-    size_t lines = 0, i = 0;
+    size_t lines = 1, i = 0;
     while (i++ < pString->len)
         if (pString->data[i] == '\n')
             lines++;
