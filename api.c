@@ -4,12 +4,43 @@ char* ref_cache_file_path = NULL;
 
 Ref_Data* ref_cache = NULL;
 
+char* keys_file_path = NULL;
+
+Key_Ring* api_keys = NULL;
+
+char api_abbreviations[API_PROVIDER_MAX][SYMBOL_MAX_LENGTH] = {"IEX", "AV", "CMC"};
+
+char api_names[API_PROVIDER_MAX][NAME_MAX_LENGTH] = {"Investors Exchange (IEX)", "Alpha Vantage",
+                                                     "CoinMarketCap"};
+
+char api_websites[API_PROVIDER_MAX][URL_MAX_LENGTH] = {
+        "URL TBD", "https://www.alphavantage.co/support/#api-key",
+        "https://pro.coinmarketcap.com/signup"};
+
+void keys_file_path_init(void) {
+    char* home = getenv("HOME");
+    char* path = malloc(strlen(home) + 32);
+    pointer_alloc_check(path);
+    sprintf(path, "%s/.tick_api_keys.json", home);
+    keys_file_path = path; // $HOME/.tick_api_keys.json
+}
+
 void ref_cache_file_path_init(void) {
     char* home = getenv("HOME");
     char* path = malloc(strlen(home) + 32);
     pointer_alloc_check(path);
     sprintf(path, "%s/.tick_ref_cache.json", home);
     ref_cache_file_path = path; // $HOME/.tick_ref_cache.json
+}
+
+Key_Ring* key_ring_init(void) {
+    Key_Ring* pKeys = malloc(sizeof(Key_Ring));
+    pointer_alloc_check(pKeys);
+    for (int i = 0; i < API_PROVIDER_MAX; i++) {
+        pKeys->providers[i] = i;
+        pKeys->keys[i][0] = '\0';
+    }
+    return pKeys;
 }
 
 Ref_Data* ref_data_init_length(size_t length) {
@@ -421,6 +452,61 @@ void info_array_store_totals(Info_Array* pInfo_Array) {
                                               pInfo_Array->totals->total_spent;
 }
 
+
+void keys_init(void) {
+    api_keys = key_ring_read();
+    for (int i = 0; i < API_PROVIDER_MAX; i++) {
+        if (i != API_PROVIDER_IEX && // UNCOMMENT FOR IEXV2
+            api_keys->keys[i][0] == '\0')
+            printf("API key for %s not set. Please obtain a free API key from \"%s\" and run \"$ "
+                   "tick key %s [key]\"\n", api_names[i], api_websites[i], api_abbreviations[i]);
+    }
+}
+
+void key_ring_write(const Key_Ring* keys) {
+    Json* array = json_object_new_array();
+    for (Api_Provider i = 0; i < API_PROVIDER_MAX; i++) {
+        Json* jobj = json_object_new_object();
+        json_object_object_add(jobj, "provider", json_object_new_string(api_abbreviations[i]));
+        json_object_object_add(jobj, "key", json_object_new_string(keys->keys[i]));
+        json_object_array_add(array, jobj);
+    }
+
+    String* pString = string_init_c_string(json_object_to_json_string(array));
+    string_write_file(pString, keys_file_path);
+
+    json_object_put(array);
+    string_destroy(&pString);
+}
+
+Key_Ring* key_ring_read(void) {
+    Key_Ring* pKeys = key_ring_init();
+    String* file_string = file_get_string(keys_file_path);
+    if (file_string == NULL)
+        return pKeys;
+
+    Json* jobj = json_tokener_parse(file_string->data), * idx;
+    if (jobj == NULL)
+        return pKeys;
+
+    for (size_t i = 0; i < json_object_array_length(jobj); i++) {
+        idx = json_object_array_get_idx(jobj, i);
+        for (Api_Provider j = 0; j < API_PROVIDER_MAX; j++)
+            if (streq(json_object_get_string(json_object_object_get(idx, "provider")),
+                      api_abbreviations[j]))
+                strcpy(pKeys->keys[j], json_object_get_string(json_object_object_get(idx, "key")));
+    }
+
+    json_object_put(jobj);
+    string_destroy(&file_string);
+    return pKeys;
+}
+
+void key_ring_add_key(Key_Ring* keys, Api_Provider provider, const char new_key[KEY_MAX_LENGTH]) {
+    strcpy(keys->keys[provider], new_key);
+    key_ring_write(keys);
+}
+
 void api_ref_cache_init(void) {
     Ref_Data* pRef_Data = ref_data_read_cache();
     if (pRef_Data != NULL && difftime(time(NULL), pRef_Data->time_loaded) < 60 * 60 * 24 * 7) {
@@ -739,6 +825,11 @@ void info_chart_fill_empty(Info* pInfo, int trading_days) {
         pInfo->points[i] = EMPTY;
 
     pInfo->num_points = trading_days;
+}
+
+void key_ring_destroy(Key_Ring** phKeys) {
+    free(*phKeys);
+    *phKeys = NULL;
 }
 
 void ref_data_destroy(Ref_Data** phRef_Data) {

@@ -8,7 +8,7 @@
 #define TICK_API_H
 
 typedef enum api_providers {
-    API_PROVIDER_IEX, API_PROVIDER_ALPHAVANTAGE, API_PROVIDER_COINMARKETCAP
+    API_PROVIDER_IEX, API_PROVIDER_ALPHAVANTAGE, API_PROVIDER_COINMARKETCAP, API_PROVIDER_MAX
 } Api_Provider;
 
 typedef enum data_level {
@@ -22,6 +22,7 @@ typedef enum data_level {
 #define URL_MAX_LENGTH 2048
 #define INFO_MAX_LENGTH 2048
 #define NEWS_MAX_LENGTH 10500
+#define KEY_MAX_LENGTH 256
 
 #define QUARTERS 4
 #define EMPTY (-999)
@@ -33,6 +34,11 @@ typedef enum data_level {
 #include <json-c/json_tokener.h>
 #include <pthread.h>
 #include "utils.h"
+
+typedef struct key_ring {
+    Api_Provider providers[API_PROVIDER_MAX];
+    char keys[API_PROVIDER_MAX][KEY_MAX_LENGTH];
+} Key_Ring;
 
 typedef struct ref_data {
     char** symbols;     // Sorted
@@ -152,7 +158,32 @@ extern char* ref_cache_file_path;
 
 extern Ref_Data* ref_cache;
 
+extern char* keys_file_path;
+
+extern Key_Ring* api_keys;
+
+extern char api_abbreviations[API_PROVIDER_MAX][SYMBOL_MAX_LENGTH];
+
+extern char api_names[API_PROVIDER_MAX][NAME_MAX_LENGTH];
+
+extern char api_websites[API_PROVIDER_MAX][URL_MAX_LENGTH];
+
+/**
+ * Sets global variable keys_file_path to "$HOME/.tick_api_keys.json"
+ */
+void keys_file_path_init(void);
+
+/**
+ * Sets global variable ref_cache_file_path to "$HOME/.tick_ref_cache.json"
+ */
 void ref_cache_file_path_init(void);
+
+/**
+ * Allocated a Key_Ring struct with each index of providers set to enum api_provider. Each index
+ * of keys will be null terminated length 0.
+ * @return Key_Ring*
+ */
+Key_Ring* key_ring_init(void);
 
 /**
  * Allocates a Ref_Data struct with length and returns a pointer to it.
@@ -282,6 +313,32 @@ void info_store_portfolio_data(Info* pInfo);
  * @param pInfo_Array
  */
 void info_array_store_totals(Info_Array* pInfo_Array);
+
+/**
+ * Sets global variable api_keys to a valid Key_Ring object. Reads the keys file and loads the
+ * data into api_keys.
+ */
+void keys_init(void);
+
+/**
+ * Writes a Key_Ring object to the api keys file in JSON format.
+ * @param keys Key_Ring object to write
+ */
+void key_ring_write(const Key_Ring* keys);
+
+/**
+ * Returns a valid Key_Ring object containing data from the api key file.
+ * @return Key_Ring*
+ */
+Key_Ring* key_ring_read(void);
+
+/**
+ * Adds a key to a Key_Ring object, then writes that to the api keys file.
+ * @param keys Key_Ring object to modify
+ * @param provider Api provider that the key corresponds to
+ * @param new_key the key string
+ */
+void key_ring_add_key(Key_Ring* keys, Api_Provider provider, const char new_key[KEY_MAX_LENGTH]);
 
 /**
  * Sets global variable ref_cache to a valid Ref_Data object or NULL. It will first try reading
@@ -415,6 +472,12 @@ Info* info_array_find_symbol_recursive(const Info_Array* pInfo_Array, const char
  * @param trading_days the size to realloc
  */
 void info_chart_fill_empty(Info* pInfo, int trading_days);
+
+/**
+ * Destroys Key_Ring object and frees memory. Sets the pointer of the Key_Ring to NULL
+ * @param phKeys
+ */
+void key_ring_destroy(Key_Ring** phKeys);
 
 /**
  * Destroys Ref_Data object and frees memory. Sets the pointer of the Ref_Data to NULL

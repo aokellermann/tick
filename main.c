@@ -1,4 +1,3 @@
-#include "portfolio.h"
 #include "curses_win.h"
 #include "gtk_win.h"
 
@@ -20,9 +19,11 @@ int main(int argc, char* argv[]) {
     // Init file paths
     portfolio_file_path_init();
     ref_cache_file_path_init();
+    keys_file_path_init();
 
-    // Init ref cache
+    // Init ref cache and api keys
     api_ref_cache_init();
+    keys_init();
 
     // Init cURL
     curl_global_init(CURL_GLOBAL_ALL);
@@ -33,6 +34,14 @@ int main(int argc, char* argv[]) {
     // GTK+ window
     if (argc == 1)
         window_main();
+
+    // Key
+    else if (streq(cmd, "key") && argc == 4) {
+        Api_Provider provider = 0;
+        while (!streq(sym, api_abbreviations[provider]) && provider < API_PROVIDER_MAX)
+            provider++;
+        key_ring_add_key(api_keys, provider, argv[3]);
+    }
 
     // News
     else if (streq(cmd, "news") && (argc == 3 || argc == 4)) {
@@ -110,7 +119,9 @@ int main(int argc, char* argv[]) {
     }
     free(portfolio_file_path);
     free(ref_cache_file_path);
+    free(keys_file_path);
     ref_data_destroy(&ref_cache);
+    key_ring_destroy(&api_keys);
     free(sym);
     free(cmd);
     curl_global_cleanup();
