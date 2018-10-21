@@ -266,13 +266,14 @@ String* api_iex_get_data_string(char** symbol_array, size_t len,
 
 void* api_alphavantage_store_info(void* vpInfo) {
     Info* symbol_info = vpInfo;
-    if (symbol_info->symbol[0] == '\0')
+    if (api_keys->keys[API_PROVIDER_ALPHAVANTAGE][0] == '\0' || symbol_info->symbol[0] == '\0')
         return NULL;
 
     char alphavantage_api_string[URL_MAX_LENGTH];
     sprintf(alphavantage_api_string, "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY"
-                                     "&symbol=%s&apikey=DFUMLJ1ILOM2G7IH&outputsize=full&datatype"
-                                     "=csv", symbol_info->symbol);
+                                     "&symbol=%s&apikey=%s&outputsize=full&datatype=csv",
+                                     symbol_info->symbol,
+                                     api_keys->keys[API_PROVIDER_ALPHAVANTAGE]);
     String* pString = api_curl_url(alphavantage_api_string);
     if (pString == NULL)
         return NULL;
