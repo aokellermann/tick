@@ -158,6 +158,10 @@ extern char* ref_cache_file_path;
 
 extern Ref_Data* ref_cache;
 
+extern char* crypto_cache_file_path;
+
+extern Ref_Data* crypto_cache;
+
 extern char* keys_file_path;
 
 extern Key_Ring* api_keys;
@@ -177,6 +181,11 @@ void keys_file_path_init(void);
  * Sets global variable ref_cache_file_path to "$HOME/.tick_ref_cache.json"
  */
 void ref_cache_file_path_init(void);
+
+/**
+ * Sets global variable crypto_cache_file_path to "$HOME/.tick_crypto_cache.json"
+ */
+void crypto_cache_file_path_init(void);
 
 /**
  * Allocated a Key_Ring struct with each index of providers set to enum api_provider. Each index
@@ -339,6 +348,10 @@ Key_Ring* key_ring_read(void);
  * @param new_key the key string
  */
 void key_ring_add_key(Key_Ring* keys, Api_Provider provider, const char new_key[KEY_MAX_LENGTH]);
+/**
+ *curl "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?sort=name&limit=5000
+ * &CMC_PRO_API_KEY=%s"
+ */
 
 /**
  * Sets global variable ref_cache to a valid Ref_Data object or NULL. It will first try reading
@@ -359,12 +372,20 @@ void api_ref_data_write_cache(void);
  */
 Ref_Data* ref_data_read_cache(void);
 
+void api_crypto_cache_init(void);
+
+void api_crypto_cache_write(void);
+
+Ref_Data* crypto_cache_read(void);
+
 /**
  * Stores the data found in IEX formatted jobj in the Ref_Data.
  * @param pRef_Data
  * @param jobj
  */
 void ref_data_store_json(Ref_Data* pRef_Data, const Json* jobj);
+
+void ref_data_store_json_crypto(Ref_Data* pRef_Data, const Json* jobj);
 
 /**
  * Stores the data found in IEX formatted jobj in the Info_Array.

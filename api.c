@@ -4,6 +4,10 @@ char* ref_cache_file_path = NULL;
 
 Ref_Data* ref_cache = NULL;
 
+char* crypto_cache_file_path = NULL;
+
+Ref_Data* crypto_cache = NULL;
+
 char* keys_file_path = NULL;
 
 Key_Ring* api_keys = NULL;
@@ -31,6 +35,14 @@ void ref_cache_file_path_init(void) {
     pointer_alloc_check(path);
     sprintf(path, "%s/.tick_ref_cache.json", home);
     ref_cache_file_path = path; // $HOME/.tick_ref_cache.json
+}
+
+void crypto_cache_file_path_init(void) {
+    char* home = getenv("HOME");
+    char* path = malloc(strlen(home) + 32);
+    pointer_alloc_check(path);
+    sprintf(path, "%s/.tick_crypto_cache.json", home);
+    crypto_cache_file_path = path; // $HOME/.tick_crypto_cache.json
 }
 
 Key_Ring* key_ring_init(void) {
@@ -545,6 +557,64 @@ Ref_Data* ref_data_read_cache(void) {
     return pRef_Data;
 }
 
+void api_crypto_cache_init(void) {
+    Ref_Data* pRef_Data = crypto_cache_read();
+    if (pRef_Data != NULL && difftime(time(NULL), pRef_Data->time_loaded) < 60 * 60 * 24 * 7) {
+        crypto_cache = pRef_Data;
+        return;
+    }
+
+    api_crypto_cache_write();
+    crypto_cache = crypto_cache_read();
+}
+
+void api_crypto_cache_write(void) {
+    char url[URL_MAX_LENGTH];
+    sprintf(url, "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?sort=name"
+                 "&limit=5000&CMC_PRO_API_KEY=%s", api_keys->keys[API_PROVIDER_COINMARKETCAP]);
+    String* pString = api_curl_url(url);
+    puts("Curled cmc");
+    if (pString == NULL)
+        return;
+
+    Json* jobj = json_tokener_parse(pString->data);
+    Json* data = json_object_object_get(jobj, "data"), * idx;
+    for (size_t i = 0; i < json_object_array_length(data); i++) {
+        idx = json_object_array_get_idx(data, i);
+        json_object_object_del(idx, "quote");
+    }
+
+    const char* str = json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PLAIN);
+    String* smaller = string_init_c_string(str);
+
+    string_write_file(smaller, crypto_cache_file_path);
+    json_object_put(jobj);
+    string_destroy(&pString);
+    string_destroy(&smaller);
+}
+
+Ref_Data* crypto_cache_read(void) {
+    String* pString = file_get_string(crypto_cache_file_path);
+    if (pString == NULL)
+        return NULL;
+
+    Json* jobj = json_tokener_parse(pString->data);
+    if (jobj == NULL)
+        return NULL;
+
+    if (json_object_get_int64(json_object_object_get(json_object_object_get(jobj, "status"),
+            "error_code")))
+        return NULL;
+
+    Ref_Data* pRef_Data = ref_data_init_length(json_object_array_length(json_object_object_get
+            (jobj, "data")));
+    ref_data_store_json_crypto(pRef_Data, jobj);
+
+    json_object_put(jobj);
+    string_destroy(&pString);
+    return pRef_Data;
+}
+
 void ref_data_store_json(Ref_Data* pRef_Data, const Json* jobj) {
     Json* idx;
     for (size_t i = 0; i < pRef_Data->length; i++) {
@@ -570,6 +640,31 @@ void ref_data_store_json(Ref_Data* pRef_Data, const Json* jobj) {
             .tm_mday = atoi(day)
     };
     pRef_Data->time_loaded = mktime(&time);
+}
+
+void ref_data_store_json_crypto(Ref_Data* pRef_Data, const Json* jobj) {
+    char date[DATE_MAX_LENGTH];
+    strcpy(date, json_object_get_string(json_object_object_get(json_object_object_get(jobj,
+            "status"), "timestamp")));
+    for (size_t i = 0; i < strlen(date); i++) {
+        if (date[i] == 'T') {
+            date[i] = '\0';
+            break;
+        }
+    }
+    struct tm time;
+    sscanf(date, "%d-%d-%d", &time.tm_year, &time.tm_mon, &time.tm_mday);
+    time.tm_year -= 1900;
+    time.tm_mon--;
+    pRef_Data->time_loaded = mktime(&time);
+
+    Json* data = json_object_object_get(jobj, "data"), * idx;
+    for (size_t i = 0; i < pRef_Data->length; i++) {
+        idx = json_object_array_get_idx(data, i);
+        strcpy(pRef_Data->names[i], json_object_get_string(json_object_object_get(idx, "slug")));
+        strcpy(pRef_Data->symbols[i], json_object_get_string(json_object_object_get(idx,
+                "symbol")));
+    }
 }
 
 void info_array_store_endpoints_json(Info_Array* pInfo_Array, const Json* jobj) {

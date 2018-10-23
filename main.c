@@ -19,11 +19,13 @@ int main(int argc, char* argv[]) {
     // Init file paths
     portfolio_file_path_init();
     ref_cache_file_path_init();
+    crypto_cache_file_path_init();
     keys_file_path_init();
 
     // Init ref cache and api keys
-    api_ref_cache_init();
     keys_init();
+    api_ref_cache_init();
+    api_crypto_cache_init();
 
     // Init cURL
     curl_global_init(CURL_GLOBAL_ALL);
@@ -119,8 +121,10 @@ int main(int argc, char* argv[]) {
     }
     free(portfolio_file_path);
     free(ref_cache_file_path);
+    free(crypto_cache_file_path);
     free(keys_file_path);
     ref_data_destroy(&ref_cache);
+    ref_data_destroy(&crypto_cache);
     key_ring_destroy(&api_keys);
     free(sym);
     free(cmd);
