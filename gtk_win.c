@@ -24,6 +24,17 @@ void window_main(void) {
         strcpy(column_names[i], gtk_tree_view_column_get_title(gtk_tree_view_get_column(
                 tree_view, i)));
 
+    if (api_keys->keys[API_PROVIDER_ALPHAVANTAGE][0] != '\0' &&
+        api_keys->keys[API_PROVIDER_COINMARKETCAP][0] != '\0') {
+        gtk_button_set_label(GTK_BUTTON(GET_OBJECT("load_button")), "Load Portfolio");
+    } else {
+        GtkComboBoxText* combo = GTK_COMBO_BOX_TEXT(GET_OBJECT("set_key_provider_combo_box"));
+        for (Api_Provider i = API_PROVIDER_ALPHAVANTAGE; i < API_PROVIDER_MAX; i++)
+            gtk_combo_box_text_append(combo, api_abbreviations[i], api_names[i]);
+
+        gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 0);
+    }
+
     // Connect signals
     gtk_builder_connect_signals(app.builder, NULL);
 
@@ -78,6 +89,26 @@ void check_list_add_api_data(void) {
 }
 
 void on_load_button_clicked(GtkButton* button) {
+    if (streq(gtk_button_get_label(button), "Set API Key")) {
+        char av_str[2500] = {0};
+        if (api_keys->keys[API_PROVIDER_ALPHAVANTAGE][0] == '\0')
+            sprintf(av_str, "API key for %s not set. Please obtain a free API key from\n\"%s\"\n\n",
+                api_names[API_PROVIDER_ALPHAVANTAGE], api_websites[API_PROVIDER_ALPHAVANTAGE]);
+        char cmc_str[2500] = {0};
+        if (api_keys->keys[API_PROVIDER_COINMARKETCAP][0] == '\0')
+            sprintf(cmc_str, "API key for %s not set. Please obtain a free API key from\n\"%s\"",
+                api_names[API_PROVIDER_COINMARKETCAP], api_websites[API_PROVIDER_COINMARKETCAP]);
+        char message[5500];
+        sprintf(message, "All API keys must be set to enable functionality.\n\n%s%s", av_str,
+                cmc_str);
+        GValue gtext = G_VALUE_INIT;
+        g_value_init(&gtext, G_TYPE_STRING);
+        g_value_set_string(&gtext, message);
+        g_object_set_property(GET_OBJECT("set_key_dialog"), "text", &gtext);
+        gtk_widget_show(GTK_WIDGET(GET_OBJECT("set_key_dialog")));
+        return;
+    }
+
     if (difftime(time(NULL), app.last_reload) <= 60)
         return;
 
@@ -317,6 +348,33 @@ void on_password_entry_activate(GtkEntry* entry) {
 void on_get_password_dialog_response(GtkDialog* dialog, gint response_id) {
     if (response_id == GTK_RESPONSE_OK)
         on_password_entry_activate(NULL);
+    else gtk_widget_hide(GTK_WIDGET(dialog));
+}
+
+void on_key_entry_activate(GtkEntry* entry) {
+    const gchar* key = gtk_entry_get_text(GTK_ENTRY(GET_OBJECT("key_entry")));
+    if (key[0] == '\0')
+        return;
+
+    GtkComboBoxText* combo = GTK_COMBO_BOX_TEXT(GET_OBJECT("set_key_provider_combo_box"));
+    const gchar* provider_str = gtk_combo_box_text_get_active_text(combo);
+    Api_Provider provider;
+    for (provider = 0; provider < API_PROVIDER_MAX; provider++)
+        if (streq(provider_str, api_names[provider]))
+            break;
+
+    key_ring_add_key(api_keys, provider, key);
+
+    if (api_keys->keys[API_PROVIDER_ALPHAVANTAGE][0] != '\0' &&
+        api_keys->keys[API_PROVIDER_COINMARKETCAP][0] != '\0')
+        gtk_button_set_label(GTK_BUTTON(GET_OBJECT("load_button")), "Load Portfolio");
+
+    gtk_widget_hide(GTK_WIDGET(GET_OBJECT("set_key_dialog")));
+}
+
+void on_set_key_dialog_response(GtkDialog* dialog, gint response_id) {
+    if (response_id == GTK_RESPONSE_OK)
+        on_key_entry_activate(NULL);
     else gtk_widget_hide(GTK_WIDGET(dialog));
 }
 

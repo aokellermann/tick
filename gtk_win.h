@@ -155,6 +155,24 @@ void on_password_entry_activate(GtkEntry* entry);
 void on_get_password_dialog_response(GtkDialog* dialog, gint response_id);
 
 /**
+ * SIGNAL FOR KEY ENTRY ACTIVATE
+ *
+ * If the entered key is not empty, sets the api key with the given provider and key.
+ * @param entry UNUSED -- MAY BE NULL
+ */
+void on_key_entry_activate(GtkEntry* entry);
+
+/**
+* SIGNAL FOR SET KEY DIALOG RESPONSE
+*
+* If response is GTK_RESPONSE_CANCEL (if click cancel or press escape), hide the dialog.
+* Otherwise, calls on_key_entry_activate.
+* @param dialog
+* @param response_id response of button activated  -- either GTK_RESPONSE_CANCEL or GTK_RESPONSE_OK
+*/
+void on_set_key_dialog_response(GtkDialog* dialog, gint response_id);
+
+/**
  * SIGNAL FOR CHECK WINDOW DESTROY
  *
  * Encrypts and writes the portfolio to file if necessary. Unrefs gtk builder and exits main gtk

@@ -25,8 +25,8 @@ int main(int argc, char* argv[]) {
     // Init ref cache and api keys
     keys_init();
 
-    if (api_keys->keys[API_PROVIDER_ALPHAVANTAGE][0] == '\0' ||
-        api_keys->keys[API_PROVIDER_COINMARKETCAP][0] == '\0')
+    if (argc != 1 && (api_keys->keys[API_PROVIDER_ALPHAVANTAGE][0] == '\0' ||
+        api_keys->keys[API_PROVIDER_COINMARKETCAP][0] == '\0'))
         GOTO_CLEAN_MSG("One or more API keys not set. All API keys must be set before using Tick.");
 
     api_ref_cache_init();
