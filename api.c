@@ -63,7 +63,7 @@ Ref_Data* ref_data_init_length(size_t length) {
     pointer_alloc_check(pRef_Data->slugs);
     pointer_alloc_check(pRef_Data->names);
     for (size_t i = 0; i < length; i++) {
-        pRef_Data->slugs[i] = malloc(SYMBOL_MAX_LENGTH);
+        pRef_Data->slugs[i] = malloc(SLUG_MAX_LENGTH);
         pRef_Data->names[i] = malloc(NAME_MAX_LENGTH);
         pointer_alloc_check(pRef_Data->slugs[i]);
         pointer_alloc_check(pRef_Data->names[i]);

@@ -18,6 +18,7 @@ typedef enum data_level {
 #define CELL_MAX_LENGTH 16
 #define DATE_MAX_LENGTH 32
 #define SYMBOL_MAX_LENGTH 32
+#define SLUG_MAX_LENGTH 64
 #define NAME_MAX_LENGTH 128
 #define URL_MAX_LENGTH 2048
 #define INFO_MAX_LENGTH 2048
@@ -60,7 +61,7 @@ typedef struct info_array Info_Array;
 
 typedef struct info {
     int api_provider;                   // IEX, ALPHAVANTAGE, COINMARKETCAP
-    char slug[SYMBOL_MAX_LENGTH];       // API call string -- ex. AAPL, DSENX, RIPPLE, ZCASH
+    char slug[SLUG_MAX_LENGTH];       // API call string -- ex. AAPL, DSENX, RIPPLE, ZCASH
     /** API DATA **/
 
     /* Company */
