@@ -63,11 +63,10 @@ Ref_Data* ref_data_init_length(size_t length) {
     pointer_alloc_check(pRef_Data->slugs);
     pointer_alloc_check(pRef_Data->names);
     for (size_t i = 0; i < length; i++) {
-        pRef_Data->slugs[i] = malloc(SLUG_MAX_LENGTH);
-        pRef_Data->names[i] = malloc(NAME_MAX_LENGTH);
+        pRef_Data->slugs[i] = calloc(SLUG_MAX_LENGTH, sizeof(char));
+        pRef_Data->names[i] = calloc(NAME_MAX_LENGTH, sizeof(char));
         pointer_alloc_check(pRef_Data->slugs[i]);
         pointer_alloc_check(pRef_Data->names[i]);
-        memset(pRef_Data->names[i], '\0', NAME_MAX_LENGTH);
     }
     pRef_Data->length = length;
     pRef_Data->time_loaded = EMPTY;
