@@ -655,7 +655,7 @@ void ref_data_store_json_cmc(Ref_Data* pRef_Data, const Json* jobj) {
             break;
         }
     }
-    struct tm time;
+    struct tm time = {0};
     sscanf(date, "%d-%d-%d", &time.tm_year, &time.tm_mon, &time.tm_mday);
     time.tm_year -= 1900;
     time.tm_mon--;
