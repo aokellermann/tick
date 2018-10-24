@@ -63,7 +63,7 @@ void check_list_create_from_string(void) {
             // Set amount for securities, but not totals
             gtk_list_store_set(pListStore, &iter, AMOUNT, idx->famount, -1);
         }
-        gtk_list_store_set(pListStore, &iter, SYMBOL, idx->symbol, SPENT, idx->ftotal_spent, -1);
+        gtk_list_store_set(pListStore, &iter, LABEL, idx->slug, SPENT, idx->ftotal_spent, -1);
     }
 }
 
@@ -79,12 +79,13 @@ void check_list_add_api_data(void) {
         if (i == 0) // Get first iterator
             gtk_tree_model_get_iter_first(GTK_TREE_MODEL(pListStore), &iter);
         else gtk_tree_model_iter_next(GTK_TREE_MODEL(pListStore), &iter);
-        gtk_list_store_set(pListStore, &iter, VALUE, idx->fcurrent_value, PROFIT,
-                           idx->fprofit_total, PROFIT_PERCENT, idx->fprofit_total_percent,
-                           PROFIT_24H, idx->fprofit_last_close, PROFIT_24H_PERCENT,
-                           idx->fprofit_last_close_percent, PROFIT_7D, idx->fprofit_7d,
-                           PROFIT_7D_PERCENT, idx->fprofit_7d_percent, PROFIT_30D, idx->fprofit_30d,
-                           PROFIT_30D_PERCENT, idx->fprofit_30d_percent, -1);
+        if (idx->api_provider == API_PROVIDER_COINMARKETCAP)
+            gtk_list_store_set(pListStore, &iter, LABEL, idx->name);
+        else gtk_list_store_set(pListStore, &iter, LABEL, idx->symbol, VALUE, idx->fcurrent_value,
+                PROFIT, idx->fprofit_total, PROFIT_PERCENT, idx->fprofit_total_percent, PROFIT_24H,
+                idx->fprofit_last_close, PROFIT_24H_PERCENT, idx->fprofit_last_close_percent,
+                PROFIT_7D, idx->fprofit_7d, PROFIT_7D_PERCENT, idx->fprofit_7d_percent, PROFIT_30D,
+                idx->fprofit_30d, PROFIT_30D_PERCENT, idx->fprofit_30d_percent, -1);
     }
 }
 
@@ -279,19 +280,19 @@ void on_modify_button_clicked(GtkButton* button) {
 }
 
 void on_modify_entry_activate(GtkEntry* entry) {
-    GtkEntry* symbol_entry = GTK_ENTRY(GET_OBJECT("modify_symbol_entry"));
+    GtkEntry* slug_entry = GTK_ENTRY(GET_OBJECT("modify_symbol_entry"));
     GtkEntry* amount_entry = GTK_ENTRY(GET_OBJECT("modify_amount_entry"));
     GtkEntry* spent_entry = GTK_ENTRY(GET_OBJECT("modify_spent_entry"));
     // Get three fields
-    const gchar* gsymbol = gtk_entry_get_text(symbol_entry);
-    char symbol[strlen(gsymbol) + 1];
-    strcpy(symbol, gsymbol);
-    strtoupper(symbol);
+    const gchar* gslug = gtk_entry_get_text(slug_entry);
+    char slug[strlen(gslug) + 1];
+    strcpy(slug, gslug);
+    strtoupper(slug);
     const gchar* amount_str = gtk_entry_get_text(amount_entry);
     const gchar* spent_str = gtk_entry_get_text(spent_entry);
 
     // Return on empty entry
-    if (symbol[0] == '\0' || !is_str_number(amount_str) || !is_str_number(spent_str))
+    if (slug[0] == '\0' || !is_str_number(amount_str) || !is_str_number(spent_str))
         return;
 
     double amount = strtod(amount_str, NULL);
@@ -310,9 +311,9 @@ void on_modify_entry_activate(GtkEntry* entry) {
     else modop = SET;
 
     // On successful modification, update portfolio
-    if (!portfolio_modify_string(app.portfolio_string, symbol, amount, spent * amount, modop))
+    if (!portfolio_modify_string(app.portfolio_string, slug, amount, spent * amount, modop))
         list_store_update();
-    else show_generic_message_dialog("Invalid symbol or arguments.", FALSE);
+    else show_generic_message_dialog("Invalid slug or arguments.", FALSE);
     gtk_widget_hide(GTK_WIDGET(GET_OBJECT("portfolio_modify_dialog")));
 }
 
@@ -395,7 +396,7 @@ void on_check_window_destroy(void) {
 }
 
 void on_column_clicked(GtkTreeViewColumn* column, GtkListStore* list_store) {
-    Col_Index idx = SYMBOL;
+    Col_Index idx = LABEL;
     for (Col_Index i = AMOUNT; i < NUM_COLS; i++) // Determine which column was clicked
         if (streq(gtk_tree_view_column_get_title(column), column_names[i]))
             idx = i;
@@ -409,10 +410,10 @@ void on_check_tree_view_row_activated(GtkTreeView* tree_view, GtkTreePath* path,
     GtkTreeIter iter;
     GtkTreeModel* model = GTK_TREE_MODEL(GET_OBJECT("check_list"));
     gtk_tree_model_get_iter(model, &iter, path);
-    gchar* symbol;
-    gtk_tree_model_get(model, &iter, SYMBOL, &symbol, -1);
-    symbol_show_info(symbol);
-    g_free(symbol);
+    gchar* slug;
+    gtk_tree_model_get(model, &iter, LABEL, &slug, -1);
+    slug_show_info(slug);
+    g_free(slug);
 }
 
 void on_info_back_button_clicked(GtkButton* button) {
@@ -430,18 +431,19 @@ void on_search_entry_focus_in_event(GtkWidget* search_entry, GdkEvent* event) {
     GtkTreeIter iter;
     for (size_t i = 0; i < ref_cache->length; i++) {
         gtk_list_store_append(list_store, &iter);
-        gtk_list_store_set(list_store, &iter, 0, ref_cache->symbols[i], -1);
+        gtk_list_store_set(list_store, &iter, 0, ref_cache->slugs[i], -1);
     }
 }
 
 void on_search_entry_activate(GtkEntry* entry) {
-    const gchar* symbol = gtk_entry_get_text(entry);
-    char modstr[strlen(symbol) + 1];
-    strcpy(modstr, symbol);
+    const gchar* slug = gtk_entry_get_text(entry);
+    char modstr[strlen(slug) + 1];
+    strcpy(modstr, slug);
     strtoupper(modstr);
-    if (symbol[0] != '\0' && ref_data_get_index_from_symbol_bsearch(ref_cache,
-            modstr, 0, ref_cache->length - 1) != -1)
-        symbol_show_info(modstr);
+    if (slug[0] != '\0' &&
+            (ref_data_get_index_from_slug_bsearch(ref_cache, modstr, 0, ref_cache->length - 1) != -1 ||
+        ref_data_get_index_from_slug_bsearch(crypto_cache, modstr, 0, ref_cache->length - 1) != -1))
+        slug_show_info(modstr);
 }
 
 gboolean on_info_graph_drawing_area_draw(GtkWidget* widget, cairo_t* cr) {
@@ -547,16 +549,16 @@ void on_info_peers_tree_view_row_activated(GtkTreeView* tree_view, GtkTreePath* 
     GtkTreeIter iter;
     GtkTreeModel* model = GTK_TREE_MODEL(GET_OBJECT("peers_list"));
     gtk_tree_model_get_iter(model, &iter, path);
-    gchar* symbol;
-    gtk_tree_model_get(model, &iter, 0, &symbol, -1);
-    symbol_show_info(symbol);
-    g_free(symbol);
+    gchar* slug;
+    gtk_tree_model_get(model, &iter, 0, &slug, -1);
+    slug_show_info(slug);
+    g_free(slug);
 }
 
-void symbol_show_info(const char* symbol) {
-    Info* pInfo = info_array_find_symbol_recursive(app.portfolio_data, symbol);
+void slug_show_info(const char* slug) {
+    Info* pInfo = info_array_find_slug_recursive(app.portfolio_data, slug);
     if (pInfo == NULL)
-        pInfo = info_array_find_symbol_recursive(app.info_cache, symbol);
+        pInfo = info_array_find_slug_recursive(app.info_cache, slug);
 
     if (pInfo == NULL) { // Append to cache
         if (app.info_cache->length == INFO_ARRAY_CACHE_MAX) {
@@ -564,7 +566,7 @@ void symbol_show_info(const char* symbol) {
             app.info_cache = info_array_init();
         }
 
-        info_array_append(app.info_cache, symbol);
+        info_array_append(app.info_cache, slug);
         pInfo = app.info_cache->array[app.info_cache->length - 1];
     }
 
@@ -639,8 +641,8 @@ void list_store_sort(GtkListStore* list_store, Col_Index idx) {
 
         do {
             // Store symbols in sym1 and sym2 to make sure not totals
-            gtk_tree_model_get(model, &iter1, SYMBOL, &sym1, -1);
-            gtk_tree_model_get(model, &iter2, SYMBOL, &sym2, -1);
+            gtk_tree_model_get(model, &iter1, LABEL, &sym1, -1);
+            gtk_tree_model_get(model, &iter2, LABEL, &sym2, -1);
 
             // Don't sort TOTALS
             if (!streq(sym1, "TOTALS") && !streq(sym2, "TOTALS")) {
@@ -649,8 +651,8 @@ void list_store_sort(GtkListStore* list_store, Col_Index idx) {
                 gtk_tree_model_get(model, &iter2, idx, &str2, -1);
 
                 // Compare doubles
-                if ((idx != SYMBOL && strtod(str1, NULL) < strtod(str2, NULL)) ||
-                    (idx == SYMBOL && strcmp(str1, str2) > 0)) { // Compare strings
+                if ((idx != LABEL && strtod(str1, NULL) < strtod(str2, NULL)) ||
+                    (idx == LABEL && strcmp(str1, str2) > 0)) { // Compare strings
                     gtk_list_store_swap(list_store, &iter1, &iter2);
                     loop_flag = 1;
                 }

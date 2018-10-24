@@ -38,7 +38,7 @@ https://github.com/aokellermann/
     <columns>
       <!-- column-name Amount -->
       <column type="gchararray"/>
-      <!-- column-name Symbol -->
+      <!-- column-name Label -->
       <column type="gchararray"/>
       <!-- column-name Value -->
       <column type="gchararray"/>
@@ -1159,17 +1159,17 @@ https://github.com/aokellermann/
                   </object>
                 </child>
                 <child>
-                  <object class="GtkTreeViewColumn" id="symbol_column">
+                  <object class="GtkTreeViewColumn" id="label_column">
                     <property name="resizable">True</property>
                     <property name="sizing">fixed</property>
                     <property name="min_width">100</property>
-                    <property name="title" translatable="yes">Symbol</property>
+                    <property name="title" translatable="yes">Label</property>
                     <property name="expand">True</property>
                     <property name="clickable">True</property>
                     <property name="sort_indicator">True</property>
                     <signal name="clicked" handler="on_column_clicked" object="check_list" swapped="no"/>
                     <child>
-                      <object class="GtkCellRendererText" id="symbol_renderer">
+                      <object class="GtkCellRendererText" id="label_renderer">
                         <property name="xalign">0</property>
                       </object>
                       <attributes>

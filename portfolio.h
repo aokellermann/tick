@@ -47,14 +47,14 @@ String* portfolio_ncurses_get_plaintext_string(char** password_ref);
  *
  * Afterwards, re-encrypts the portfolio and writes it to the user's home folder.
  *
- * @param symbol string containing the symbol of the security to add or name of the cryptocurrency
+ * @param slug string containing the slug of the security to add or name of the cryptocurrency
  * @param quantity_shares the number of shares to modify the portfolio by (must be >0 for add/rm,
  * or >=0 for set)
  * @param usd_spent the amount of USD to modify the portfolio by (must be >0 for add/rm, or >=0
  * for set)
  * @param mod_option SET, REMOVE, or ADD
  */
-void portfolio_modify_write(const char* symbol, double quantity_shares, double usd_spent,
+void portfolio_modify_write(const char* slug, double quantity_shares, double usd_spent,
                             int mod_option);
 
 /**
@@ -76,12 +76,12 @@ void portfolio_modify_write(const char* symbol, double quantity_shares, double u
  *
  * After this, overwrite the portfolio with the (encrypted or not) created/modified JSON array.
  *
- * @param symbol string containing the symbol of the security to add or name of the cryptocurrency
+ * @param slug string containing the slug of the security to add or name of the cryptocurrency
  * @param quantity_shares the number of shares to modify the portfolio by
  * @param usd_spent the amount of USD to modify the portfolio by
  * @param mod_option SET, REMOVE, or ADD
  */
-int portfolio_modify_string(String* pString, const char* symbol, double quantity_shares,
+int portfolio_modify_string(String* pString, const char* slug, double quantity_shares,
                              double usd_spent, int mod_option);
 
 /**
@@ -103,10 +103,10 @@ void portfolio_sort(Info_Array* portfolio_data, int sort_option);
 /**
  * Goes through the given JSON array until the JSON object at the given index's key "Symbol" contains
  * the string ticker_name_string, then returns that index number.
- * @param symbol the security to return the index of
+ * @param slug the security to return the index of
  * @param jarray the JSON array
  * @return -1 if not found, the index number otherwise
  */
-int portfolio_symbol_index(const char* symbol, const Json* jarray);
+int portfolio_slug_index(const char* slug, const Json* jarray);
 
 #endif

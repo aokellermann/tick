@@ -2,7 +2,7 @@
 #include "gtk_win.h"
 
 int main(int argc, char* argv[]) {
-    char* cmd = NULL, * sym = NULL;
+    char* cmd = NULL, * slug = NULL;
     if (argc > 1) {
         cmd = malloc(strlen(argv[1]) + 1);
         pointer_alloc_check(cmd);
@@ -10,10 +10,10 @@ int main(int argc, char* argv[]) {
         strtolower(cmd);
     }
     if (argc > 2) {
-        sym = malloc(strlen(argv[2]) + 1);
-        pointer_alloc_check(sym);
-        strcpy(sym, argv[2]);
-        strtoupper(sym);
+        slug = malloc(strlen(argv[2]) + 1);
+        pointer_alloc_check(slug);
+        strcpy(slug, argv[2]);
+        strtoupper(slug);
     }
 
     // Init file paths
@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     // Key
     else if (streq(cmd, "key") && argc == 4) {
         Api_Provider provider = 0;
-        while (!streq(sym, api_abbreviations[provider]) && provider < API_PROVIDER_MAX)
+        while (!streq(slug, api_abbreviations[provider]) && provider < API_PROVIDER_MAX)
             provider++;
         key_ring_add_key(api_keys, provider, argv[3]);
     }
@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
         int num_articles = 3; // Default
         if (argc == 4)
             num_articles = (int) strtol(argv[3], NULL, 10);
-        news_print(sym, num_articles);
+        news_print(slug, num_articles);
     }
 
         //Encrypt/decrypt
@@ -64,25 +64,25 @@ int main(int argc, char* argv[]) {
 
         // Info
     else if (streq(cmd, "info") && argc == 3)
-        interface_print(sym);
+        interface_print(slug);
 
         // Graph
     else if (streq(cmd, "graph") && argc == 3)
-        graph_print(sym, NULL);
+        graph_print(slug, NULL);
 
         // Compare
     else if (streq(cmd, "cmp") && argc == 4) {
-        char sym2[strlen(argv[3]) + 1];
-        strcpy(sym2, argv[3]);
-        strtoupper(sym2);
-        graph_print(sym, sym2);
+        char slug2[strlen(argv[3]) + 1];
+        strcpy(slug2, argv[3]);
+        strtoupper(slug2);
+        graph_print(slug, slug2);
     }
 
         // Check
     else if (streq(cmd, "check") && (argc == 2 || argc == 3)) {
         if (argc == 2)
             portfolio_printw();
-        else portfolio_print_stock(sym);
+        else portfolio_print_stock(slug);
     }
 
         // Portfolio
@@ -98,8 +98,8 @@ int main(int argc, char* argv[]) {
     if (modop > -1) {
         if (argc != 5)
             puts("Invalid arguments. Type \"man tick\" for help.");
-        else if (strlen(sym) > 16)
-            puts("Invalid symbol.");
+        else if (strlen(slug) > 16)
+            puts("Invalid slug.");
         else if (strlen(argv[3]) > 16 || strlen(argv[4]) > 16)
             puts("Value too large.");
         else {
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
             if (ea)
                 usd *= qty;
 
-            portfolio_modify_write(sym, qty, usd, modop);
+            portfolio_modify_write(slug, qty, usd, modop);
         }
     }
 
@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
     ref_data_destroy(&ref_cache);
     ref_data_destroy(&crypto_cache);
     key_ring_destroy(&api_keys);
-    free(sym);
+    free(slug);
     free(cmd);
     curl_global_cleanup();
     return 0;

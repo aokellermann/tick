@@ -12,7 +12,7 @@
 #define INFO_ARRAY_CACHE_MAX 128
 
 typedef enum column_index {
-    AMOUNT, SYMBOL, VALUE, SPENT, PROFIT, PROFIT_PERCENT, PROFIT_24H, PROFIT_24H_PERCENT, PROFIT_7D,
+    AMOUNT, LABEL, VALUE, SPENT, PROFIT, PROFIT_PERCENT, PROFIT_24H, PROFIT_24H_PERCENT, PROFIT_7D,
     PROFIT_7D_PERCENT, PROFIT_30D, PROFIT_30D_PERCENT, NUM_COLS
 } Col_Index;
 
@@ -238,9 +238,9 @@ void on_info_peers_tree_view_row_activated(GtkTreeView* tree_view, GtkTreePath* 
 
 /**
  * Shows info for the given symbol
- * @param symbol
+ * @param slug
  */
-void symbol_show_info(const char* symbol);
+void slug_show_info(const char* slug);
 
 /**
  * Formats text in an Info_Array for printing to window

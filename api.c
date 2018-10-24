@@ -58,14 +58,14 @@ Key_Ring* key_ring_init(void) {
 Ref_Data* ref_data_init_length(size_t length) {
     Ref_Data* pRef_Data = malloc(sizeof(Ref_Data));
     pointer_alloc_check(pRef_Data);
-    pRef_Data->symbols = malloc(length * sizeof(char*));
+    pRef_Data->slugs = malloc(length * sizeof(char*));
     pRef_Data->names = malloc(length * sizeof(char*));
-    pointer_alloc_check(pRef_Data->symbols);
+    pointer_alloc_check(pRef_Data->slugs);
     pointer_alloc_check(pRef_Data->names);
     for (size_t i = 0; i < length; i++) {
-        pRef_Data->symbols[i] = malloc(SYMBOL_MAX_LENGTH);
+        pRef_Data->slugs[i] = malloc(SYMBOL_MAX_LENGTH);
         pRef_Data->names[i] = malloc(NAME_MAX_LENGTH);
-        pointer_alloc_check(pRef_Data->symbols[i]);
+        pointer_alloc_check(pRef_Data->slugs[i]);
         pointer_alloc_check(pRef_Data->names[i]);
         memset(pRef_Data->names[i], '\0', NAME_MAX_LENGTH);
     }
@@ -87,23 +87,24 @@ Info* info_init(void) {
     Info* pInfo = malloc(sizeof(Info));
     pointer_alloc_check(pInfo);
     *pInfo = (Info) { // Null terminate every string and set every value to EMPTY
-            .api_provider = EMPTY, .symbol[0] = '\0', .name[0] = '\0', .industry[0] = '\0',
-            .website[0] = '\0', .description[0] = '\0', .ceo[0] = '\0', .issue_type[0] = '\0',
-            .sector[0] = '\0', .intraday_time = EMPTY, .price = EMPTY, .marketcap = EMPTY,
-            .volume_1d = EMPTY, .pe_ratio = EMPTY, .div_yield = EMPTY, .revenue = EMPTY,
-            .gross_profit = EMPTY, .cash = EMPTY, .debt = EMPTY, .eps = {EMPTY, EMPTY, EMPTY, EMPTY}
-            , .fiscal_period[0][0] = '\0', .fiscal_period[1][0] = '\0', .fiscal_period[2][0] = '\0',
-            .fiscal_period[3][0] = '\0', .eps_year_ago = {EMPTY, EMPTY, EMPTY, EMPTY},
-            .price_last_close = EMPTY, .price_7d = EMPTY, .price_30d = EMPTY, .points = NULL,
-            .num_points = EMPTY, .articles = NULL, .num_articles = EMPTY, .peers = NULL,
-            .amount = EMPTY, .total_spent = EMPTY, .current_value = 0, .famount[0] = '\0',
-            .ftotal_spent[0] = '\0', .fcurrent_value[0] = '\0', .profit_total = EMPTY,
-            .profit_total_percent = EMPTY, .profit_last_close = EMPTY,
-            .profit_last_close_percent = EMPTY, .profit_7d = EMPTY, .profit_7d_percent = EMPTY,
-            .profit_30d = EMPTY, .profit_30d_percent = EMPTY, .fprofit_total[0] = '\0',
-            .fprofit_total_percent[0] = '\0', .fprofit_last_close[0] = '\0',
-            .fprofit_last_close_percent[0] = '\0', .fprofit_7d[0] = '\0',
-            .fprofit_7d_percent[0] = '\0', .fprofit_30d[0] = '\0', .fprofit_30d_percent[0] = '\0'
+            .api_provider = EMPTY, .slug[0] = '\0', .symbol[0] = '\0', .name[0] = '\0',
+            .industry[0] ='\0', .website[0] = '\0', .description[0] = '\0', .ceo[0] = '\0',
+            .issue_type[0] = '\0', .sector[0] = '\0', .intraday_time = EMPTY, .price = EMPTY,
+            .marketcap = EMPTY, .volume_1d = EMPTY, .pe_ratio = EMPTY, .div_yield = EMPTY,
+            .revenue = EMPTY, .gross_profit = EMPTY, .cash = EMPTY, .debt = EMPTY,
+            .eps = {EMPTY, EMPTY, EMPTY, EMPTY}, .fiscal_period[0][0] = '\0',
+            .fiscal_period[1][0] = '\0', .fiscal_period[2][0] = '\0', .fiscal_period[3][0] = '\0',
+            .eps_year_ago = {EMPTY, EMPTY, EMPTY, EMPTY}, .price_last_close = EMPTY,
+            .price_7d = EMPTY, .price_30d = EMPTY, .points = NULL, .num_points = EMPTY,
+            .articles = NULL, .num_articles = EMPTY, .peers = NULL, .amount = EMPTY,
+            .total_spent = EMPTY, .current_value = 0, .famount[0] = '\0', .ftotal_spent[0] = '\0',
+            .fcurrent_value[0] = '\0', .profit_total = EMPTY, .profit_total_percent = EMPTY,
+            .profit_last_close = EMPTY, .profit_last_close_percent = EMPTY, .profit_7d = EMPTY,
+            .profit_7d_percent = EMPTY, .profit_30d = EMPTY, .profit_30d_percent = EMPTY,
+            .fprofit_total[0] = '\0', .fprofit_total_percent[0] = '\0',
+            .fprofit_last_close[0] = '\0', .fprofit_last_close_percent[0] = '\0',
+            .fprofit_7d[0] = '\0', .fprofit_7d_percent[0] = '\0', .fprofit_30d[0] = '\0',
+            .fprofit_30d_percent[0] = '\0'
     };
     return pInfo;
 }
@@ -129,15 +130,17 @@ Info_Array* info_array_init_length(size_t length) {
         pInfo_Array->array[i] = info_init();
 
     pInfo_Array->totals = info_init();
+    strcpy(pInfo_Array->totals->slug, "TOTALS");
     strcpy(pInfo_Array->totals->symbol, "TOTALS");
+    strcpy(pInfo_Array->totals->name, "TOTALS");
     return pInfo_Array;
 }
 
-void info_array_append(Info_Array* pInfo_Array, const char* symbol) {
+void info_array_append(Info_Array* pInfo_Array, const char* slug) {
     pInfo_Array->array = realloc(pInfo_Array->array, sizeof(char*) * (pInfo_Array->length + 1));
     pInfo_Array->length++;
     pInfo_Array->array[pInfo_Array->length - 1] = info_init();
-    strcpy(pInfo_Array->array[pInfo_Array->length - 1]->symbol, symbol);
+    strcpy(pInfo_Array->array[pInfo_Array->length - 1]->slug, slug);
 }
 
 size_t string_writefunc(void* ptr, size_t size, size_t nmemb, String* pString) {
@@ -172,20 +175,20 @@ String* api_curl_url(const char* url) {
 }
 
 void api_iex_store_info_array(Info_Array* pInfo_Array, Data_Level data_level) {
-    char** symbol_array = malloc(pInfo_Array->length * sizeof(char*));
-    pointer_alloc_check(symbol_array);
+    char** slug_array = malloc(pInfo_Array->length * sizeof(char*));
+    pointer_alloc_check(slug_array);
     for (size_t i = 0; i < pInfo_Array->length; i++) {
-        symbol_array[i] = malloc(SYMBOL_MAX_LENGTH);
-        pointer_alloc_check(symbol_array[i]);
-        strcpy(symbol_array[i], pInfo_Array->array[i]->symbol);
+        slug_array[i] = malloc(SYMBOL_MAX_LENGTH);
+        pointer_alloc_check(slug_array[i]);
+        strcpy(slug_array[i], pInfo_Array->array[i]->slug);
     }
 
-    String* pString = api_iex_get_data_string(symbol_array, pInfo_Array->length, data_level);
+    String* pString = api_iex_get_data_string(slug_array, pInfo_Array->length, data_level);
     if (pString == NULL) { // No internet connection
         for (size_t i = 0; i < pInfo_Array->length; i++)
-            free(symbol_array[i]);
+            free(slug_array[i]);
 
-        free(symbol_array);
+        free(slug_array);
         return;
     }
 
@@ -193,29 +196,29 @@ void api_iex_store_info_array(Info_Array* pInfo_Array, Data_Level data_level) {
     info_array_store_endpoints_json(pInfo_Array, jobj);
 
     for (size_t i = 0; i < pInfo_Array->length; i++)
-        free(symbol_array[i]);
+        free(slug_array[i]);
 
-    free(symbol_array);
+    free(slug_array);
     json_object_put(jobj);
     string_destroy(&pString);
 }
 
 void api_iex_store_info(Info* pInfo, Data_Level data_level) {
-    char* symbol_array = malloc(SYMBOL_MAX_LENGTH);
-    pointer_alloc_check(symbol_array);
-    strcpy(symbol_array, pInfo->symbol);
-    String* pString = api_iex_get_data_string(&symbol_array, 1, data_level);
+    char* slug_array = malloc(SYMBOL_MAX_LENGTH);
+    pointer_alloc_check(slug_array);
+    strcpy(slug_array, pInfo->slug);
+    String* pString = api_iex_get_data_string(&slug_array, 1, data_level);
     Json* jobj = json_tokener_parse(pString->data);
-    Json* jsymbol = json_object_object_get(jobj, pInfo->symbol);
-    if (jsymbol != NULL)
-        info_store_endpoints_json(pInfo, jsymbol);
+    Json* jslug = json_object_object_get(jobj, pInfo->slug);
+    if (jslug != NULL)
+        info_store_endpoints_json(pInfo, jslug);
 
-    free(symbol_array);
+    free(slug_array);
     json_object_put(jobj);
     string_destroy(&pString);
 }
 
-String* api_iex_get_data_string(char** symbol_array, size_t len,
+String* api_iex_get_data_string(char** slug_array, size_t len,
                                 Data_Level data_level) {
     char endpoints[128];
     if (data_level == DATA_LEVEL_ALL)
@@ -230,8 +233,8 @@ String* api_iex_get_data_string(char** symbol_array, size_t len,
 
     size_t num_partitions = len / 100 + (len % 100 > 0), idx;
     char iex_api_string[num_partitions][URL_MAX_LENGTH * 2];
-    char symbol_list_string[num_partitions][INFO_MAX_LENGTH];
-    memset(symbol_list_string, '\0', num_partitions * INFO_MAX_LENGTH);
+    char slug_list_string[num_partitions][INFO_MAX_LENGTH];
+    memset(slug_list_string, '\0', num_partitions * INFO_MAX_LENGTH);
     String* string_array[num_partitions];
     pthread_t threads[num_partitions];
     for (size_t i = 0; i < num_partitions; i++) {
@@ -240,21 +243,21 @@ String* api_iex_get_data_string(char** symbol_array, size_t len,
             if (idx == len)
                 break;
 
-            if (!streq(symbol_array[idx], "USD$"))
-                sprintf(&symbol_list_string[i][strlen(symbol_list_string[i])], "%s,",
-                        symbol_array[idx]);
+            if (!streq(slug_array[idx], "USD$"))
+                sprintf(&slug_list_string[i][strlen(slug_list_string[i])], "%s,",
+                        slug_array[idx]);
         }
-        symbol_list_string[i][strlen(symbol_list_string[i]) - 1] = '\0'; // Remove last comma
+        slug_list_string[i][strlen(slug_list_string[i]) - 1] = '\0'; // Remove last comma
         sprintf(iex_api_string[i],
                 "https://api.iextrading.com/1.0/stock/market/batch?symbols=%s&types=%s",
-                symbol_list_string[i], endpoints);
+                slug_list_string[i], endpoints);
         if (pthread_create(&threads[i], NULL, (void* (*)(void*)) api_curl_url,
                            (void*) iex_api_string[i]))
             EXIT_MSG("Error creating thread!");
     }
 
     for (size_t i = 0; i < num_partitions; i++)
-        if (!streq(symbol_array[i], "USD$") &&
+        if (!streq(slug_array[i], "USD$") &&
             pthread_join(threads[i], (void**) &string_array[i]))
             EXIT_MSG("Error joining thread!");
 
@@ -277,83 +280,83 @@ String* api_iex_get_data_string(char** symbol_array, size_t len,
 }
 
 void* api_alphavantage_store_info(void* vpInfo) {
-    Info* symbol_info = vpInfo;
-    if (api_keys->keys[API_PROVIDER_ALPHAVANTAGE][0] == '\0' || symbol_info->symbol[0] == '\0')
+    Info* pInfo = vpInfo;
+    if (api_keys->keys[API_PROVIDER_ALPHAVANTAGE][0] == '\0' || pInfo->slug[0] == '\0')
         return NULL;
 
     char alphavantage_api_string[URL_MAX_LENGTH];
     sprintf(alphavantage_api_string, "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY"
                                      "&symbol=%s&apikey=%s&outputsize=full&datatype=csv",
-                                     symbol_info->symbol,
-                                     api_keys->keys[API_PROVIDER_ALPHAVANTAGE]);
+                                     pInfo->slug, api_keys->keys[API_PROVIDER_ALPHAVANTAGE]);
     String* pString = api_curl_url(alphavantage_api_string);
     if (pString == NULL)
         return NULL;
 
-    if (pString->data[0] == '{') { // Invalid symbol/error
+    if (pString->data[0] == '{') { // Invalid slug/error
         string_destroy(&pString);
         return NULL;
     }
 
-    symbol_info->api_provider = API_PROVIDER_ALPHAVANTAGE;
+    pInfo->api_provider = API_PROVIDER_ALPHAVANTAGE;
+    strcpy(pInfo->symbol, pInfo->slug);
 
-    symbol_info->num_points = (int) string_get_num_lines(pString) - 1;
+    pInfo->num_points = (int) string_get_num_lines(pString) - 1;
     size_t idx = 0;
-    if (symbol_info->num_points > 1260) // 5 years
-        symbol_info->num_points = 1260;
+    if (pInfo->num_points > 1260) // 5 years
+        pInfo->num_points = 1260;
 
-    symbol_info->points = calloc((size_t) symbol_info->num_points, sizeof(double));
-    pointer_alloc_check(symbol_info->points);
+    pInfo->points = calloc((size_t) pInfo->num_points, sizeof(double));
+    pointer_alloc_check(pInfo->points);
 
     csv_goto_next_line(pString, &idx); // skip columns line
-    for (int i = symbol_info->num_points - 1; i >= 0; i--) {
+    for (int i = pInfo->num_points - 1; i >= 0; i--) {
         for (size_t j = 0; j < 4; j++)
             csv_goto_next_value(pString, &idx);
 
-        symbol_info->points[i] = csv_read_next_double(pString, &idx);
-        if (symbol_info->points[i] == 0 && i < symbol_info->num_points - 1) // API Error
-            symbol_info->points[i] = symbol_info->points[i + 1];
+        pInfo->points[i] = csv_read_next_double(pString, &idx);
+        if (pInfo->points[i] == 0 && i < pInfo->num_points - 1) // API Error
+            pInfo->points[i] = pInfo->points[i + 1];
         csv_goto_next_line(pString, &idx);
     }
 
-    symbol_info->price = symbol_info->points[symbol_info->num_points - 1];
-    symbol_info->price_last_close = symbol_info->points[symbol_info->num_points - 2];
-    symbol_info->price_7d = symbol_info->points[symbol_info->num_points - 6];
-    symbol_info->price_30d = symbol_info->points[symbol_info->num_points - 22];
+    pInfo->price = pInfo->points[pInfo->num_points - 1];
+    pInfo->price_last_close = pInfo->points[pInfo->num_points - 2];
+    pInfo->price_7d = pInfo->points[pInfo->num_points - 6];
+    pInfo->price_30d = pInfo->points[pInfo->num_points - 22];
     string_destroy(&pString);
     return vpInfo;
 }
 
 void* api_coinmarketcap_store_info(void* vpInfo) {
-    Info* symbol_info = vpInfo;
+    Info* pInfo = vpInfo;
     char coinmarketcap_api_string[URL_MAX_LENGTH];
-    sprintf(coinmarketcap_api_string, "https://api.coinmarketcap.com/v1/ticker/%s", symbol_info->symbol);
+    sprintf(coinmarketcap_api_string, "https://api.coinmarketcap.com/v1/ticker/%s", pInfo->slug);
     String* pString = api_curl_url(coinmarketcap_api_string);
     if (pString == NULL)
         return NULL;
 
-    if (pString->data[0] == '{') { // Invalid symbol
+    if (pString->data[0] == '{') { // Invalid slug
         string_destroy(&pString);
         return NULL;
     }
 
-    symbol_info->api_provider = API_PROVIDER_COINMARKETCAP;
+    pInfo->api_provider = API_PROVIDER_COINMARKETCAP;
 
     Json* jobj = json_tokener_parse(pString->data);
     Json* data = json_object_array_get_idx(jobj, 0);
-    strncpy(symbol_info->name, json_object_get_string(json_object_object_get(data, "name")),
+    strncpy(pInfo->name, json_object_get_string(json_object_object_get(data, "name")),
             NAME_MAX_LENGTH - 1);
-    symbol_info->name[NAME_MAX_LENGTH - 1] = '\0';
-    strcpy(symbol_info->symbol, json_object_get_string(json_object_object_get(data, "symbol")));
-    symbol_info->price = strtod(json_object_get_string(json_object_object_get(data, "price_usd")), NULL);
-    symbol_info->price_last_close = symbol_info->price /
+    pInfo->name[NAME_MAX_LENGTH - 1] = '\0';
+    strcpy(pInfo->symbol, json_object_get_string(json_object_object_get(data, "symbol")));
+    pInfo->price = strtod(json_object_get_string(json_object_object_get(data, "price_usd")), NULL);
+    pInfo->price_last_close = pInfo->price /
             (strtod(json_object_get_string(json_object_object_get(data, "percent_change_24h")), NULL) / 100 + 1);
-    symbol_info->price_7d = symbol_info->price /
+    pInfo->price_7d = pInfo->price /
             (strtod(json_object_get_string(json_object_object_get(data, "percent_change_7d")), NULL) / 100 + 1);
-    symbol_info->price_30d = symbol_info->price_7d;
-    symbol_info->marketcap = strtol(json_object_get_string(json_object_object_get(data, "market_cap_usd")), NULL, 10);
-    symbol_info->volume_1d = strtol(json_object_get_string(json_object_object_get(data, "24h_volume_usd")), NULL, 10);
-    symbol_info->intraday_time = strtol(json_object_get_string(json_object_object_get(data, "last_updated")), NULL, 10);
+    pInfo->price_30d = pInfo->price_7d;
+    pInfo->marketcap = strtol(json_object_get_string(json_object_object_get(data, "market_cap_usd")), NULL, 10);
+    pInfo->volume_1d = strtol(json_object_get_string(json_object_object_get(data, "24h_volume_usd")), NULL, 10);
+    pInfo->intraday_time = strtol(json_object_get_string(json_object_object_get(data, "last_updated")), NULL, 10);
     json_object_put(jobj);
     string_destroy(&pString);
     return vpInfo;
@@ -369,7 +372,7 @@ void api_store_info_array(Info_Array* pInfo_Array, Data_Level data_level) {
     memset(open_threads, 0, pInfo_Array->length * sizeof(int));
     for (size_t i = 0; i < pInfo_Array->length; i++) {
         pInfo = pInfo_Array->array[i];
-        if (pInfo->api_provider == EMPTY && !streq(pInfo->symbol, "USD$")) {
+        if (pInfo->api_provider == EMPTY && !streq(pInfo->slug, "USD$")) {
             open_threads[i] = 1;
             if (pthread_create(&threads[i], NULL, api_coinmarketcap_store_info, pInfo)) // Crypto
                 EXIT_MSG("Error creating thread!");
@@ -386,7 +389,7 @@ void api_store_info_array(Info_Array* pInfo_Array, Data_Level data_level) {
             open_threads[i] = 0;
         }
 
-        if (pInfo->api_provider == EMPTY && !streq(pInfo->symbol, "USD$")) {
+        if (pInfo->api_provider == EMPTY && !streq(pInfo->slug, "USD$")) {
             open_threads[i] = 1;
             if (pthread_create(&threads[i], NULL, api_alphavantage_store_info, pInfo))
                 EXIT_MSG("Error creating thread!");
@@ -413,7 +416,7 @@ void api_store_info(Info* pInfo, Data_Level data_level) {
 }
 
 void info_store_portfolio_data(Info* pInfo) {
-    if (!streq(pInfo->symbol, "USD$")) {
+    if (!streq(pInfo->slug, "USD$")) {
         if (pInfo->amount != EMPTY) {
             pInfo->current_value = pInfo->amount * pInfo->price;
             pInfo->profit_total = pInfo->current_value - pInfo->total_spent;
@@ -550,7 +553,7 @@ Ref_Data* ref_data_read_cache(void) {
         return NULL;
 
     Ref_Data* pRef_Data = ref_data_init_length(json_object_array_length(jobj));
-    ref_data_store_json(pRef_Data, jobj);
+    ref_data_store_json_iex(pRef_Data, jobj);
 
     json_object_put(jobj);
     string_destroy(&pString);
@@ -608,18 +611,18 @@ Ref_Data* crypto_cache_read(void) {
 
     Ref_Data* pRef_Data = ref_data_init_length(json_object_array_length(json_object_object_get
             (jobj, "data")));
-    ref_data_store_json_crypto(pRef_Data, jobj);
+    ref_data_store_json_cmc(pRef_Data, jobj);
 
     json_object_put(jobj);
     string_destroy(&pString);
     return pRef_Data;
 }
 
-void ref_data_store_json(Ref_Data* pRef_Data, const Json* jobj) {
+void ref_data_store_json_iex(Ref_Data* pRef_Data, const Json* jobj) {
     Json* idx;
     for (size_t i = 0; i < pRef_Data->length; i++) {
         idx = json_object_array_get_idx(jobj, i);
-        strcpy(pRef_Data->symbols[i], json_object_get_string(json_object_object_get(idx,
+        strcpy(pRef_Data->slugs[i], json_object_get_string(json_object_object_get(idx,
                                                                                     "symbol")));
         strncpy(pRef_Data->names[i], json_object_get_string(json_object_object_get(idx, "name")),
                 NAME_MAX_LENGTH -1);
@@ -642,7 +645,7 @@ void ref_data_store_json(Ref_Data* pRef_Data, const Json* jobj) {
     pRef_Data->time_loaded = mktime(&time);
 }
 
-void ref_data_store_json_crypto(Ref_Data* pRef_Data, const Json* jobj) {
+void ref_data_store_json_cmc(Ref_Data* pRef_Data, const Json* jobj) {
     char date[DATE_MAX_LENGTH];
     strcpy(date, json_object_get_string(json_object_object_get(json_object_object_get(jobj,
             "status"), "timestamp")));
@@ -661,31 +664,33 @@ void ref_data_store_json_crypto(Ref_Data* pRef_Data, const Json* jobj) {
     Json* data = json_object_object_get(jobj, "data"), * idx;
     for (size_t i = 0; i < pRef_Data->length; i++) {
         idx = json_object_array_get_idx(data, i);
-        strcpy(pRef_Data->names[i], json_object_get_string(json_object_object_get(idx, "slug")));
-        strcpy(pRef_Data->symbols[i], json_object_get_string(json_object_object_get(idx,
-                "symbol")));
+        strcpy(pRef_Data->names[i], json_object_get_string(json_object_object_get(idx, "name")));
+        strcpy(pRef_Data->slugs[i], json_object_get_string(json_object_object_get(idx, "slug")));
     }
 }
 
 void info_array_store_endpoints_json(Info_Array* pInfo_Array, const Json* jobj) {
-    Json* jsymbol;
+    Json* jsecurity;
     for (size_t i = 0; i < pInfo_Array->length; i++) {
-        jsymbol = json_object_object_get(jobj, pInfo_Array->array[i]->symbol);
-        if (jsymbol != NULL)
-            info_store_endpoints_json(pInfo_Array->array[i], jsymbol);
+        jsecurity = json_object_object_get(jobj, pInfo_Array->array[i]->slug);
+        if (jsecurity != NULL)
+            info_store_endpoints_json(pInfo_Array->array[i], jsecurity);
+
+        // IEX symbols and slugs are the same
+        strcpy(pInfo_Array->array[i]->symbol, pInfo_Array->array[i]->slug);
     }
 }
 
-void info_store_endpoints_json(Info* pInfo, const Json* jsymbol) {
+void info_store_endpoints_json(Info* pInfo, const Json* jslug) {
     Json* jquote, * jchart, * jcompany, * jstats, * jpeers, * jnews, * jearnings;
     pInfo->api_provider = API_PROVIDER_IEX;
-    jquote = json_object_object_get(jsymbol, "quote");
-    jchart = json_object_object_get(jsymbol, "chart");
-    jcompany = json_object_object_get(jsymbol, "company");
-    jstats = json_object_object_get(jsymbol, "stats");
-    jpeers = json_object_object_get(jsymbol, "peers");
-    jnews = json_object_object_get(jsymbol, "news");
-    jearnings = json_object_object_get(jsymbol, "earnings");
+    jquote = json_object_object_get(jslug, "quote");
+    jchart = json_object_object_get(jslug, "chart");
+    jcompany = json_object_object_get(jslug, "company");
+    jstats = json_object_object_get(jslug, "stats");
+    jpeers = json_object_object_get(jslug, "peers");
+    jnews = json_object_object_get(jslug, "news");
+    jearnings = json_object_object_get(jslug, "earnings");
     if (jquote != NULL)
         info_store_quote_json(pInfo, jquote);
     if (jchart != NULL)
@@ -785,7 +790,7 @@ void info_store_peers_json(Info* pInfo, const Json* jpeers) {
 
     pInfo->peers = info_array_init_length(len);
     for (size_t i = 0; i < pInfo->peers->length; i++)
-        strcpy(pInfo->peers->array[i]->symbol, json_object_get_string(
+        strcpy(pInfo->peers->array[i]->slug, json_object_get_string(
                 json_object_array_get_idx(jpeers, i)));
 
     api_store_info_array(pInfo->peers, DATA_LEVEL_CHECK);
@@ -835,7 +840,7 @@ void info_store_news_json(Info* pInfo, const Json* jnews) {
         if (related != NULL)
             strcpy(pInfo->articles[i]->related, json_object_get_string(related));
         int related_num = 0;
-        for (size_t j = 0; j < strlen(pInfo->articles[i]->related); j++) { // List only first five related symbols
+        for (size_t j = 0; j < strlen(pInfo->articles[i]->related); j++) { // List only first five related slugs
             if (pInfo->articles[i]->related[j] == ',')
                 related_num++;
             if (related_num == 5) {
@@ -869,28 +874,28 @@ void info_store_earnings_json(Info* pInfo, const Json* jearnings) {
     }
 }
 
-Info* info_array_find_symbol(const Info_Array* pInfo_Array, const char* symbol) {
+Info* info_array_find_slug(const Info_Array* pInfo_Array, const char* slug) {
     for (size_t i = 0; i < pInfo_Array->length; i++)
-        if (streq(symbol, pInfo_Array->array[i]->symbol))
+        if (streq(slug, pInfo_Array->array[i]->slug))
             return pInfo_Array->array[i];
 
     return NULL;
 }
 
-int ref_data_get_index_from_symbol_bsearch(const Ref_Data* pRef_Data, const char* symbol,
+int ref_data_get_index_from_slug_bsearch(const Ref_Data* pRef_Data, const char* slug,
                                          size_t left, size_t right) {
     if (right < left)
         return -1;
 
     size_t mid = left + (right - left) / 2;
-    int cmp = strcmp(symbol, pRef_Data->symbols[mid]);
+    int cmp = strcmp(slug, pRef_Data->slugs[mid]);
     if (cmp == 0)
         return (int) mid;
 
     if (cmp > 0)
-        return ref_data_get_index_from_symbol_bsearch(pRef_Data, symbol, mid + 1, right);
+        return ref_data_get_index_from_slug_bsearch(pRef_Data, slug, mid + 1, right);
 
-    return ref_data_get_index_from_symbol_bsearch(pRef_Data, symbol, left, mid - 1);
+    return ref_data_get_index_from_slug_bsearch(pRef_Data, slug, left, mid - 1);
 }
 
 int ref_data_get_index_from_name_bsearch(const Ref_Data* pRef_Data, const char* name,
@@ -909,17 +914,17 @@ int ref_data_get_index_from_name_bsearch(const Ref_Data* pRef_Data, const char* 
     return ref_data_get_index_from_name_bsearch(pRef_Data, name, left, mid - 1);
 }
 
-Info* info_array_find_symbol_recursive(const Info_Array* pInfo_Array, const char* symbol) {
+Info* info_array_find_slug_recursive(const Info_Array* pInfo_Array, const char* slug) {
     Info* pInfo = NULL;
     if (pInfo_Array == NULL)
         return NULL;
 
-    pInfo = info_array_find_symbol(pInfo_Array, symbol);
+    pInfo = info_array_find_slug(pInfo_Array, slug);
     if (pInfo != NULL)
         return pInfo;
 
     for (size_t i = 0; i < pInfo_Array->length; i++) {
-        pInfo = info_array_find_symbol_recursive(pInfo_Array->array[i]->peers, symbol);
+        pInfo = info_array_find_slug_recursive(pInfo_Array->array[i]->peers, slug);
         if (pInfo != NULL)
             return pInfo;
     }
@@ -950,10 +955,10 @@ void ref_data_destroy(Ref_Data** phRef_Data) {
 
     Ref_Data* pRef_data = *phRef_Data;
     for (size_t i = 0; i < pRef_data->length; i++) {
-        free(pRef_data->symbols[i]);
+        free(pRef_data->slugs[i]);
         free(pRef_data->names[i]);
     }
-    free(pRef_data->symbols);
+    free(pRef_data->slugs);
     free(pRef_data->names);
     free(*phRef_Data);
     *phRef_Data = NULL;

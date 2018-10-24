@@ -23,7 +23,7 @@ String* portfolio_ncurses_get_plaintext_string(char** password_ref) {
     return pString;
 }
 
-void portfolio_modify_write(const char* symbol, double quantity_shares, double usd_spent,
+void portfolio_modify_write(const char* slug, double quantity_shares, double usd_spent,
                             int mod_option) {
     if (quantity_shares < 0 || usd_spent < 0) // Negative numbers
         RET_MSG("You must use positive values.")
@@ -43,7 +43,7 @@ void portfolio_modify_write(const char* symbol, double quantity_shares, double u
         return;
 
     // Perform modification
-    portfolio_modify_string(pString, symbol, quantity_shares, usd_spent, mod_option);
+    portfolio_modify_string(pString, slug, quantity_shares, usd_spent, mod_option);
 
     if (password != NULL) { // If need to re-encrypt
         rc4_encode_string(pString, password);
@@ -55,10 +55,10 @@ void portfolio_modify_write(const char* symbol, double quantity_shares, double u
     string_destroy(&pString);
 }
 
-int portfolio_modify_string(String* pString, const char* symbol, double quantity_shares,
+int portfolio_modify_string(String* pString, const char* slug, double quantity_shares,
                              double usd_spent, int mod_option) {
     // Null string or negative numbers
-    if ((symbol != NULL && symbol[0] == '\0') || quantity_shares < 0 || usd_spent < 0)
+    if ((slug != NULL && slug[0] == '\0') || quantity_shares < 0 || usd_spent < 0)
         return 1;
 
     // Can't add or remove both values of 0
@@ -74,31 +74,31 @@ int portfolio_modify_string(String* pString, const char* symbol, double quantity
     if (jobj == NULL)
         RET_FALSE_MSG("Portfolio corrupted! Check JSON formatting.");
 
-    int index = portfolio_symbol_index(symbol, jobj);
+    int index = portfolio_slug_index(slug, jobj);
     if (index == -1) { // If security is not already contained in portfolio
         if (mod_option == REMOVE) {// If trying to remove a security they don't own
             status = 1;
             GOTO_CLEAN_MSG("You don't have any of this security to remove")
         }
 
-        if (!streq("USD$", symbol)) { // Check that the symbol is valid, except if it's USD
+        if (!streq("USD$", slug)) { // Check that the slug is valid, except if it's USD
             Info* data = info_init();
-            strcpy(data->symbol, symbol);
+            strcpy(data->slug, slug);
             api_store_info(data, DATA_LEVEL_CHECK);
             if (data->api_provider == EMPTY) {// If NULL response from APIs, it's invalid
                 info_destroy(&data);
                 status = 1;
-                GOTO_CLEAN_MSG("Invalid symbol.")
+                GOTO_CLEAN_MSG("Invalid slug.")
             }
             info_destroy(&data);
         }
 
         Json* new_object = json_object_new_object(); // Creates new array index and adds values to it
         json_object_array_add(jobj, new_object);
-        json_object_object_add(new_object, "Symbol", json_object_new_string(symbol));
+        json_object_object_add(new_object, "Symbol", json_object_new_string(slug));
         json_object_object_add(new_object, "Shares", json_object_new_double(quantity_shares));
         json_object_object_add(new_object, "USD_Spent", json_object_new_double(usd_spent));
-        printf("Added %lf %s bought for %lf to portfolio.\n", quantity_shares, symbol, usd_spent);
+        printf("Added %lf %s bought for %lf to portfolio.\n", quantity_shares, slug, usd_spent);
     } else { //if already in portfolio
         Json* current_index = json_object_array_get_idx(jobj, (size_t) index);
         // Store values already in portfolio to modify.
@@ -109,12 +109,12 @@ int portfolio_modify_string(String* pString, const char* symbol, double quantity
         if (mod_option == SET) { // SET
             current_shares = quantity_shares;
             current_spent = usd_spent;
-            printf("Set amount of %s in portfolio to %lf bought for %lf.\n", symbol, quantity_shares,
+            printf("Set amount of %s in portfolio to %lf bought for %lf.\n", slug, quantity_shares,
                    usd_spent);
         } else if (mod_option == ADD) { // ADD
             current_shares += quantity_shares;
             current_spent += usd_spent;
-            printf("Added %lf %s bought for %lf to portfolio.\n", quantity_shares, symbol, usd_spent);
+            printf("Added %lf %s bought for %lf to portfolio.\n", quantity_shares, slug, usd_spent);
         } else { // REMOVE
             current_shares -= quantity_shares;
             current_spent -= usd_spent;
@@ -123,7 +123,7 @@ int portfolio_modify_string(String* pString, const char* symbol, double quantity
                 GOTO_CLEAN_MSG("You don't have enough of this security to remove.")
             }
 
-            printf("Removed %lf %s bought for %lf to portfolio.\n", quantity_shares, symbol, usd_spent);
+            printf("Removed %lf %s bought for %lf to portfolio.\n", quantity_shares, slug, usd_spent);
         }
         if (current_shares == 0 && usd_spent == 0) // Deletes index from portfolio if values are 0
             json_object_array_del_idx(jobj, (size_t) index, 1);
@@ -156,7 +156,7 @@ Info_Array* portfolio_info_array_init_from_portfolio_string(String* pString) {
     Info_Array* portfolio_data = info_array_init_length(length);
     portfolio_data->totals->total_spent = 0;
     for (size_t i = 0; i < portfolio_data->length; i++) {
-        strcpy(portfolio_data->array[i]->symbol,
+        strcpy(portfolio_data->array[i]->slug,
                json_object_get_string(json_object_object_get(json_object_array_get_idx(jobj, i),
                                                              "Symbol")));
         portfolio_data->array[i]->amount = json_object_get_double(json_object_object_get(
@@ -182,7 +182,7 @@ void portfolio_sort(Info_Array* portfolio_data, int sort_option) {
             sec_data1 = portfolio_data->array[i];
             sec_data2 = portfolio_data->array[i + 1];
             if (sort_option == SORT_ALPHA || sort_option > SORT_PROFIT_30D_PERCENT) {
-                if (strcmp(sec_data1->symbol, sec_data2->symbol) > 0) { // Least to greatest
+                if (strcmp(sec_data1->slug, sec_data2->slug) > 0) { // Least to greatest
                     temp = portfolio_data->array[i]; // Swap
                     portfolio_data->array[i] = portfolio_data->array[i + 1];
                     portfolio_data->array[i + 1] = temp;
@@ -229,11 +229,11 @@ void portfolio_sort(Info_Array* portfolio_data, int sort_option) {
     }
 }
 
-int portfolio_symbol_index(const char* symbol, const Json* jarray) {
+int portfolio_slug_index(const char* slug, const Json* jarray) {
     for (size_t i = 0; i < json_object_array_length(jarray); i++) {
         const char* string = json_object_get_string(
                 json_object_object_get(json_object_array_get_idx(jarray, (size_t) i), "Symbol"));
-        if (streq(string, symbol))
+        if (streq(string, slug))
             return (int) i;
     }
 

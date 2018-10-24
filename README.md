@@ -134,3 +134,4 @@ the provided license for more information.
 * Add security without reloading every security
 * Refactoring
 * gtk graph zoom
+* enum sort option

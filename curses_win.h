@@ -60,63 +60,63 @@ void info_array_portfolio_printw(Info_Array* portfolio_data);
 /**
  * Prints to stdout information about a specific security contained in the portfolio: symbol, number of shares, USD spent,
  * current value, profit, and 24h profit.
- * @param symbol the security to print
+ * @param slug the security to print
  */
-void portfolio_print_stock(const char* symbol);
+void portfolio_print_stock(const char* slug);
 
 /**
  * Main function to print information about a security. Stocks/etfs/mutf/otc securities will print in an ncurses window,
  * while cryptos will print to stdout due to lack of information.
- * @param symbol any security
+ * @param slug any security
  */
-void interface_print(const char* symbol);
+void interface_print(const char* slug);
 
 /**
  * Prints basic price information header to an Ncurses window.
  * @param window
- * @param symbol_info Info*
+ * @param pInfo Info*
  */
-void header_printw(WINDOW* window, const Info* symbol_info);
+void header_printw(WINDOW* window, const Info* pInfo);
 
 /**
  * Prints basic information about a security to stdout.
- * @param symbol_info Info*
+ * @param pInfo Info*
  */
-void info_print(const Info* symbol_info);
+void info_print(const Info* pInfo);
 
 /**
  * Prints basic information about a security to an Ncurses window.
- * @param symbol_info Info*
+ * @param pInfo Info*
  */
-void info_printw(WINDOW* window, const Info* symbol_info);
+void info_printw(WINDOW* window, const Info* pInfo);
 
 /**
  * Prints num_articles articles relating to the given symbol to stdout. Currently only works for stocks/etfs
- * @param symbol stock/etf symbol
+ * @param slug stock/etf symbol
  * @param num_articles number of articles to print (max 50)
  */
-void news_print(const char* symbol, int num_articles);
+void news_print(const char* slug, int num_articles);
 
 /**
  * Prints articles relating to the given symbol to an Ncurses window. Currently only works for stocks/etfs
  * @param window
- * @param symbol_info Info*
+ * @param pInfo Info*
  */
-void news_printw(WINDOW* window, const Info* symbol_info);
+void news_printw(WINDOW* window, const Info* pInfo);
 
 /**
  * Prints peers relating to the given symbol to an Ncurses window. Currently only works for stocks/etfs
  * @param window
- * @param symbol_info Info*
+ * @param pInfo Info*
  */
-void peers_printw(WINDOW* window, const Info* symbol_info);
+void peers_printw(WINDOW* window, const Info* pInfo);
 
 /**
  * Graphs a security in stdscr. If symbol2 is not NULL, also graphs that security.
- * @param symbol security to graph
- * @param symbol2 optional second security
+ * @param slug security to graph
+ * @param slug2 optional second security
  */
-void graph_print(const char* symbol, const char* symbol2);
+void graph_print(const char* slug, const char* slug2);
 
 /**
  * -- Main input loop for graphing --
@@ -129,10 +129,10 @@ void graph_print(const char* symbol, const char* symbol2);
  * LEFT: moves start date backward by one year, three months, or one month.
  * RIGHT: moves start date forward by one year, three months, or one month.
  * @param window the window to print to
- * @param symbol_info Info* containing points
- * @param symbol_info2 optional Info* containing points
+ * @param pInfo Info* containing points
+ * @param pInfo2 optional Info* containing points
  */
-void graph_printw(WINDOW* window, Info* symbol_info, Info* symbol_info2);
+void graph_printw(WINDOW* window, Info* pInfo, Info* pInfo2);
 
 /**
  * Prints out a NCurses based graph given an Info*.
@@ -140,11 +140,11 @@ void graph_printw(WINDOW* window, Info* symbol_info, Info* symbol_info2);
  * x-axis -- date
  * y-axis -- close price
  * @param window the window to print to
- * @param symbol_info Info* containing points
- * @param symbol_info2 optional Info* containing points
+ * @param pInfo Info* containing points
+ * @param pInfo2 optional Info* containing points
  * @param start_time the starting date of prices to print
  * @param zoom the zoom level
  */
-void graph_draw(WINDOW* window, Info* symbol_info, Info* symbol_info2, struct tm* start_time, int zoom);
+void graph_draw(WINDOW* window, Info* pInfo, Info* pInfo2, struct tm* start_time, int zoom);
 
 #endif

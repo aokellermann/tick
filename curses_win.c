@@ -146,7 +146,7 @@ void info_array_portfolio_printw(Info_Array* portfolio_data) {
     endwin();
 }
 
-void portfolio_print_stock(const char* symbol) {
+void portfolio_print_stock(const char* slug) {
     String* pString = portfolio_ncurses_get_plaintext_string(NULL);
     if (pString == NULL)
         return;
@@ -154,15 +154,14 @@ void portfolio_print_stock(const char* symbol) {
     Json* jobj = json_tokener_parse(pString->data);
     size_t i = 0, len = json_object_array_length(jobj);
     while (i < len && !streq(json_object_get_string(json_object_object_get
-    (json_object_array_get_idx(
-            jobj, i), "Symbol")), symbol))
+    (json_object_array_get_idx(jobj, i), "Symbol")), slug))
         i++;
 
     if (i == len)
         GOTO_CLEAN_MSG("Your portfolio does not contain any of this security.")
 
     Info* info = info_init();
-    strcpy(info->symbol, symbol);
+    strcpy(info->slug, slug);
     api_store_info(info, DATA_LEVEL_CHECK);
 
     info->amount = json_object_get_double(json_object_object_get(json_object_array_get_idx(jobj, i), "Shares"));
@@ -181,18 +180,18 @@ void portfolio_print_stock(const char* symbol) {
     string_destroy(&pString);
 }
 
-void interface_print(const char* symbol) {
-    Info* symbol_info = info_init();
-    strcpy(symbol_info->symbol, symbol);
-    api_store_info(symbol_info, DATA_LEVEL_ALL);
-    if (symbol_info->api_provider == EMPTY) {
-        info_destroy(&symbol_info);
-        RET_MSG("Invalid symbol.")
+void interface_print(const char* slug) {
+    Info* pInfo = info_init();
+    strcpy(pInfo->slug, slug);
+    api_store_info(pInfo, DATA_LEVEL_ALL);
+    if (pInfo->api_provider == EMPTY) {
+        info_destroy(&pInfo);
+        RET_MSG("Invalid slug.")
     }
 
-    if (symbol_info->points == NULL || symbol_info->name[0] == '\0') { // If not IEX print to stdout
-        info_print(symbol_info);
-        info_destroy(&symbol_info);
+    if (pInfo->points == NULL || pInfo->name[0] == '\0') { // If not IEX print to stdout
+        info_print(pInfo);
+        info_destroy(&pInfo);
         return;
     }
 
@@ -225,194 +224,194 @@ void interface_print(const char* symbol) {
     if (graph_cols < GRAPH_COLS_MIN || graph_rows < GRAPH_ROWS_MIN) // Exits if the terminal is too small
         GOTO_CLEAN_MSG("Terminal not large enough.")
 
-    header_printw(header_window, symbol_info); // Print to windows
-    info_printw(company_window, symbol_info);
-    news_printw(news_window, symbol_info);
-    peers_printw(peer_window, symbol_info);
+    header_printw(header_window, pInfo); // Print to windows
+    info_printw(company_window, pInfo);
+    news_printw(news_window, pInfo);
+    peers_printw(peer_window, pInfo);
 
     wrefresh(header_window); // Refresh other windows before graph otherwise they won't print before next getch()
     wrefresh(company_window);
     wrefresh(news_window);
     wrefresh(peer_window);
 
-    graph_printw(graph_window, symbol_info, NULL); // No refresh needed since getch()
+    graph_printw(graph_window, pInfo, NULL); // No refresh needed since getch()
 
     cleanup:
     endwin();
-    info_destroy(&symbol_info);
+    info_destroy(&pInfo);
 }
 
-void header_printw(WINDOW* window, const Info* symbol_info) {
-    if (symbol_info->intraday_time != EMPTY) {
+void header_printw(WINDOW* window, const Info* pInfo) {
+    if (pInfo->intraday_time != EMPTY) {
         char time_str[DATE_MAX_LENGTH];
-        time_t time = symbol_info->intraday_time; // divide into second instead of milliseconds
+        time_t time = pInfo->intraday_time; // divide into second instead of milliseconds
         struct tm* ts = localtime(&time);
         strftime(time_str, DATE_MAX_LENGTH, "%F %T", ts);
         mvwprintw(window, 0, 0, "%s", time_str);
     }
-    mvwprintw(window, 0, (int) (15 + strlen(symbol_info->name) + strlen(symbol_info->symbol)), "24H      7D     ");
-    if (symbol_info->price_30d != EMPTY)
+    mvwprintw(window, 0, (int) (15 + strlen(pInfo->name) + strlen(pInfo->symbol)), "24H      7D     ");
+    if (pInfo->price_30d != EMPTY)
         wprintw(window, "30D");
-    mvwprintw(window, 1, 0, "%s %s %8.2lf %6.2lf%% %6.2lf%% ", symbol_info->name, symbol_info->symbol,
-             symbol_info->price, 100 * (symbol_info->price / symbol_info->price_last_close - 1),
-              100 * (symbol_info->price / symbol_info->price_7d - 1));
-    if (symbol_info->price_30d != EMPTY)
-        wprintw(window, "%6.2lf%%", 100 * (symbol_info->price / symbol_info->price_30d - 1));
+    mvwprintw(window, 1, 0, "%s %s %8.2lf %6.2lf%% %6.2lf%% ", pInfo->name, pInfo->symbol,
+             pInfo->price, 100 * (pInfo->price / pInfo->price_last_close - 1),
+              100 * (pInfo->price / pInfo->price_7d - 1));
+    if (pInfo->price_30d != EMPTY)
+        wprintw(window, "%6.2lf%%", 100 * (pInfo->price / pInfo->price_30d - 1));
 }
 
-void info_print(const Info* symbol_info) {
-    if (streq(symbol_info->name, ""))
-        printf("Name: %s\n", symbol_info->name);
-    if (streq(symbol_info->symbol, ""))
-        printf("Symbol: %s\n", symbol_info->symbol);
-    if (symbol_info->price != EMPTY)
-        printf("Price: $%lf\n", symbol_info->price);
-    if (symbol_info->price_last_close != EMPTY)
-        printf("Percent change 24h: %.2lf%%\n", 100 * (symbol_info->price / symbol_info->price_last_close - 1));
-    if (symbol_info->price_7d != EMPTY)
-        printf("Percent change 7d: %.2lf%%\n", 100 * (symbol_info->price / symbol_info->price_7d - 1));
-    if (symbol_info->price_30d != EMPTY)
-        printf("Percent change 30d: %.2lf%%\n", 100 * (symbol_info->price / symbol_info->price_30d - 1));
-    if (symbol_info->div_yield != EMPTY)
-        printf("Dividend yield: %.2lf%%\n", symbol_info->div_yield);
-    if (symbol_info->marketcap != EMPTY)
-        printf("Market Cap: $%ld\n", symbol_info->marketcap);
-    if (symbol_info->volume_1d != EMPTY)
-        printf("Volume 24h: $%ld\n", symbol_info->volume_1d);
+void info_print(const Info* pInfo) {
+    if (streq(pInfo->name, ""))
+        printf("Name: %s\n", pInfo->name);
+    if (streq(pInfo->symbol, ""))
+        printf("Symbol: %s\n", pInfo->symbol);
+    if (pInfo->price != EMPTY)
+        printf("Price: $%lf\n", pInfo->price);
+    if (pInfo->price_last_close != EMPTY)
+        printf("Percent change 24h: %.2lf%%\n", 100 * (pInfo->price / pInfo->price_last_close - 1));
+    if (pInfo->price_7d != EMPTY)
+        printf("Percent change 7d: %.2lf%%\n", 100 * (pInfo->price / pInfo->price_7d - 1));
+    if (pInfo->price_30d != EMPTY)
+        printf("Percent change 30d: %.2lf%%\n", 100 * (pInfo->price / pInfo->price_30d - 1));
+    if (pInfo->div_yield != EMPTY)
+        printf("Dividend yield: %.2lf%%\n", pInfo->div_yield);
+    if (pInfo->marketcap != EMPTY)
+        printf("Market Cap: $%ld\n", pInfo->marketcap);
+    if (pInfo->volume_1d != EMPTY)
+        printf("Volume 24h: $%ld\n", pInfo->volume_1d);
 }
 
-void info_printw(WINDOW* window, const Info* symbol_info) {
-    if (symbol_info->description[0] != '\0')
-        mvwprintw(window, 0, 0, "%s\n\n", symbol_info->description);
+void info_printw(WINDOW* window, const Info* pInfo) {
+    if (pInfo->description[0] != '\0')
+        mvwprintw(window, 0, 0, "%s\n\n", pInfo->description);
     else mvwprintw(window, 0, 0, "Description unavailable.\n\n");
 
-    if (symbol_info->ceo[0] != '\0')
-        wprintw(window, "CEO: %s", symbol_info->ceo);
+    if (pInfo->ceo[0] != '\0')
+        wprintw(window, "CEO: %s", pInfo->ceo);
     else wprintw(window, "CEO unavailable.");
 
-    if (symbol_info->website[0] != '\0')
-        mvwprintw(window, getcury(window), getmaxx(window) / 2, "Website: %s\n", symbol_info->website);
+    if (pInfo->website[0] != '\0')
+        mvwprintw(window, getcury(window), getmaxx(window) / 2, "Website: %s\n", pInfo->website);
     else mvwprintw(window, getcury(window), getmaxx(window) / 2, "Website unavailable.\n");
 
-    if (symbol_info->sector[0] != '\0')
-        wprintw(window, "Sector: %s", symbol_info->sector);
+    if (pInfo->sector[0] != '\0')
+        wprintw(window, "Sector: %s", pInfo->sector);
     else wprintw(window, "Sector unavailable.");
 
-    if (symbol_info->industry[0] != '\0')
-        mvwprintw(window, getcury(window), getmaxx(window) / 2, "Industry: %s\n", symbol_info->industry);
+    if (pInfo->industry[0] != '\0')
+        mvwprintw(window, getcury(window), getmaxx(window) / 2, "Industry: %s\n", pInfo->industry);
     else mvwprintw(window, getcury(window), getmaxx(window) / 2, "Industry unavailable.\n");
 
-    if (symbol_info->revenue != EMPTY)
-        wprintw(window, "Revenue: %ld", symbol_info->revenue);
+    if (pInfo->revenue != EMPTY)
+        wprintw(window, "Revenue: %ld", pInfo->revenue);
     else wprintw(window, "Revenue unavailable.");
 
-    if (symbol_info->gross_profit != EMPTY)
-        mvwprintw(window, getcury(window), getmaxx(window) / 2, "Gross Profit: %ld\n", symbol_info->gross_profit);
+    if (pInfo->gross_profit != EMPTY)
+        mvwprintw(window, getcury(window), getmaxx(window) / 2, "Gross Profit: %ld\n", pInfo->gross_profit);
     else mvwprintw(window, getcury(window), getmaxx(window) / 2, "Gross Profit unavailable.\n");
 
-    if (symbol_info->cash != EMPTY)
-        wprintw(window, "Cash: %ld", symbol_info->cash);
+    if (pInfo->cash != EMPTY)
+        wprintw(window, "Cash: %ld", pInfo->cash);
     else wprintw(window, "Cash unavailable.");
 
-    if (symbol_info->debt != EMPTY)
-        mvwprintw(window, getcury(window), getmaxx(window) / 2, "Debt: %ld\n", symbol_info->debt);
+    if (pInfo->debt != EMPTY)
+        mvwprintw(window, getcury(window), getmaxx(window) / 2, "Debt: %ld\n", pInfo->debt);
     else mvwprintw(window, getcury(window), getmaxx(window) / 2, "Debt unavailable.\n");
 
-    if (symbol_info->marketcap != EMPTY)
-        wprintw(window, "Market Cap: %ld", symbol_info->marketcap);
+    if (pInfo->marketcap != EMPTY)
+        wprintw(window, "Market Cap: %ld", pInfo->marketcap);
     else wprintw(window, "Market Cap unavailable.");
 
-    if (symbol_info->volume_1d != EMPTY)
-        mvwprintw(window, getcury(window), getmaxx(window) / 2, "Volume: %ld\n", symbol_info->volume_1d);
+    if (pInfo->volume_1d != EMPTY)
+        mvwprintw(window, getcury(window), getmaxx(window) / 2, "Volume: %ld\n", pInfo->volume_1d);
     else mvwprintw(window, getcury(window), getmaxx(window) / 2, "Volume unavailable.\n");
 
-    if (symbol_info->pe_ratio != EMPTY)
-        wprintw(window, "P/E Ratio: %lf", symbol_info->pe_ratio);
+    if (pInfo->pe_ratio != EMPTY)
+        wprintw(window, "P/E Ratio: %lf", pInfo->pe_ratio);
     else wprintw(window, "P/E Ratio unavailable.");
 
-    if (symbol_info->div_yield != EMPTY)
-        mvwprintw(window, getcury(window), getmaxx(window) / 2, "Dividend Yield: %lf\n\n", symbol_info->div_yield);
+    if (pInfo->div_yield != EMPTY)
+        mvwprintw(window, getcury(window), getmaxx(window) / 2, "Dividend Yield: %lf\n\n", pInfo->div_yield);
     else mvwprintw(window, getcury(window), getmaxx(window) / 2, "Dividend Yield unavailable.\n\n");
 
-    for (int i = 0; i < QUARTERS && symbol_info->fiscal_period[i][0] != '\0'; i++)
+    for (int i = 0; i < QUARTERS && pInfo->fiscal_period[i][0] != '\0'; i++)
         mvwprintw(window, getcury(window), 4 + i * getmaxx(window) / QUARTERS, "%s",
-                  symbol_info->fiscal_period[i]);
+                  pInfo->fiscal_period[i]);
     waddch(window, '\n');
 
-    if (symbol_info->eps[0] != EMPTY)
+    if (pInfo->eps[0] != EMPTY)
         mvwprintw(window, getcury(window), 0, "EPS ");
-    for (int i = 0; i < QUARTERS && symbol_info->eps[i] != EMPTY; i++)
+    for (int i = 0; i < QUARTERS && pInfo->eps[i] != EMPTY; i++)
         mvwprintw(window, getcury(window), 4 + i * getmaxx(window) / QUARTERS, "%.2lf",
-                  symbol_info->eps[i]);
+                  pInfo->eps[i]);
     waddch(window, '\n');
 
-    if (symbol_info->eps_year_ago[0] != EMPTY)
+    if (pInfo->eps_year_ago[0] != EMPTY)
         mvwprintw(window, getcury(window), 0, "1Y  ");
-    for (int i = 0; i < QUARTERS && symbol_info->eps_year_ago[i] != EMPTY; i++)
-        mvwprintw(window, getcury(window), 4 + i * getmaxx(window) / QUARTERS, "%.2lf", symbol_info->eps_year_ago[i]);
+    for (int i = 0; i < QUARTERS && pInfo->eps_year_ago[i] != EMPTY; i++)
+        mvwprintw(window, getcury(window), 4 + i * getmaxx(window) / QUARTERS, "%.2lf", pInfo->eps_year_ago[i]);
 }
 
-void news_print(const char* symbol, int num_articles) {
+void news_print(const char* slug, int num_articles) {
     if (num_articles > 50 || num_articles < 1)
         RET_MSG("You cannot request more than 50 articles.");
 
-    Info* symbol_info = info_init();
-    strcpy(symbol_info->symbol, symbol);
-    symbol_info->num_articles = num_articles;
-    api_store_info(symbol_info, DATA_LEVEL_NEWS);
-    if (symbol_info->api_provider == EMPTY) {
-        info_destroy(&symbol_info);
-        RET_MSG("Invalid symbol");
+    Info* pInfo = info_init();
+    strcpy(pInfo->slug, slug);
+    pInfo->num_articles = num_articles;
+    api_store_info(pInfo, DATA_LEVEL_NEWS);
+    if (pInfo->api_provider == EMPTY) {
+        info_destroy(&pInfo);
+        RET_MSG("Invalid slug");
     }
-    for (int i = 0; i < symbol_info->num_articles; i++)
+    for (int i = 0; i < pInfo->num_articles; i++)
         printf("%s | %s | %s\n%s\n%s | Related: %s\n\n",
-               symbol_info->articles[i]->headline, symbol_info->articles[i]->source, symbol_info->articles[i]->date,
-               symbol_info->articles[i]->summary, symbol_info->articles[i]->url, symbol_info->articles[i]->related);
-    info_destroy(&symbol_info);
+               pInfo->articles[i]->headline, pInfo->articles[i]->source, pInfo->articles[i]->date,
+               pInfo->articles[i]->summary, pInfo->articles[i]->url, pInfo->articles[i]->related);
+    info_destroy(&pInfo);
 }
 
-void news_printw(WINDOW* window, const Info* symbol_info) {
-    if (symbol_info->num_articles == EMPTY)
+void news_printw(WINDOW* window, const Info* pInfo) {
+    if (pInfo->num_articles == EMPTY)
         wprintw(window, "News unavailable.");
-    for (int i = 0; i < symbol_info->num_articles;  i++)
+    for (int i = 0; i < pInfo->num_articles;  i++)
         wprintw(window, "%s | %s | %s\n%s\n%s | Related: %s\n\n",
-               symbol_info->articles[i]->headline, symbol_info->articles[i]->source, symbol_info->articles[i]->date,
-               symbol_info->articles[i]->summary, symbol_info->articles[i]->url, symbol_info->articles[i]->related);
+               pInfo->articles[i]->headline, pInfo->articles[i]->source, pInfo->articles[i]->date,
+               pInfo->articles[i]->summary, pInfo->articles[i]->url, pInfo->articles[i]->related);
 }
 
-void peers_printw(WINDOW* window, const Info* symbol_info) {
-    if (symbol_info->peers == NULL) {
+void peers_printw(WINDOW* window, const Info* pInfo) {
+    if (pInfo->peers == NULL) {
         wprintw(window, "Peers unavailable.");
         return;
     }
 
     wprintw(window, "Peers:\n\nSYMBOL    PRICE    24H%%     7D%%    30D%%");
     Info* idx;
-    for (size_t i = 0; i < symbol_info->peers->length; i++) {
-        idx = symbol_info->peers->array[i];
+    for (size_t i = 0; i < pInfo->peers->length; i++) {
+        idx = pInfo->peers->array[i];
         mvwprintw(window, (int) i + 3, 0, "%6s %8.2lf %6.2lf%% %6.2lf%% %6.2lf%%", idx->symbol, idx->price,
                   100 * (idx->price / idx->price_last_close - 1), 100 * (idx->price / idx->price_7d - 1),
                   100 * (idx->price / idx->price_30d - 1));
     }
 }
 
-void graph_print(const char* symbol, const char* symbol2) {
-    Info* symbol_info = info_init(), * symbol_info2 = NULL;
-    strcpy(symbol_info->symbol, symbol);
-    api_store_info(symbol_info, DATA_LEVEL_GRAPH);
-    if (symbol_info->api_provider == EMPTY || symbol_info->points == NULL) {
-        info_destroy(&symbol_info);
-        RET_MSG("Invalid symbol")
+void graph_print(const char* slug, const char* slug2) {
+    Info* pInfo = info_init(), * pInfo2 = NULL;
+    strcpy(pInfo->slug, slug);
+    api_store_info(pInfo, DATA_LEVEL_GRAPH);
+    if (pInfo->api_provider == EMPTY || pInfo->points == NULL) {
+        info_destroy(&pInfo);
+        RET_MSG("Invalid slug")
     }
 
-    if (symbol2 != NULL) {
-        symbol_info2 = info_init();
-        strcpy(symbol_info2->symbol, symbol2);
-        api_store_info(symbol_info2, DATA_LEVEL_GRAPH);
-        if (symbol_info2->api_provider ==  EMPTY || symbol_info2->points == NULL) {
-            info_destroy(&symbol_info);
-            info_destroy(&symbol_info2);
-            RET_MSG("Invalid symbol")
+    if (slug2 != NULL) {
+        pInfo2 = info_init();
+        strcpy(pInfo2->slug, slug2);
+        api_store_info(pInfo2, DATA_LEVEL_GRAPH);
+        if (pInfo2->api_provider ==  EMPTY || pInfo2->points == NULL) {
+            info_destroy(&pInfo);
+            info_destroy(&pInfo2);
+            RET_MSG("Invalid slug")
         }
     }
     initscr();
@@ -421,13 +420,13 @@ void graph_print(const char* symbol, const char* symbol2) {
         RET_MSG("Your terminal does not support color.");
     }
 
-    graph_printw(stdscr, symbol_info, symbol_info2);
-    info_destroy(&symbol_info);
-    info_destroy(&symbol_info2);
+    graph_printw(stdscr, pInfo, pInfo2);
+    info_destroy(&pInfo);
+    info_destroy(&pInfo2);
     endwin();
 }
 
-void graph_printw(WINDOW* window, Info* symbol_info, Info* symbol_info2) {
+void graph_printw(WINDOW* window, Info* pInfo, Info* pInfo2) {
     noecho(); // Don't echo keystrokes
     keypad(window, TRUE); // Enables extra keystrokes
     curs_set(0); // Hides cursor
@@ -445,14 +444,14 @@ void graph_printw(WINDOW* window, Info* symbol_info, Info* symbol_info2) {
     int trading_days = (int) ((1.0 / DAYS_TO_BUSINESS_DAYS_RATIO) * seconds / 86400.0);
 
     // If younger than 5 years, realloc with num of trading days and fill with EMPTY
-    if (trading_days - symbol_info->num_points > 0)
-        info_chart_fill_empty(symbol_info, trading_days);
+    if (trading_days - pInfo->num_points > 0)
+        info_chart_fill_empty(pInfo, trading_days);
 
-    if (symbol_info2 != NULL && trading_days - symbol_info2->num_points > 0)
-        info_chart_fill_empty(symbol_info2, trading_days);
+    if (pInfo2 != NULL && trading_days - pInfo2->num_points > 0)
+        info_chart_fill_empty(pInfo2, trading_days);
 
     int ch, zoom = ZOOM_5y;
-    graph_draw(window, symbol_info, symbol_info2, &start_date, zoom); // Initial graph of 5 year history
+    graph_draw(window, pInfo, pInfo2, &start_date, zoom); // Initial graph of 5 year history
 
     while ((ch = wgetch(window)) != 'q') { // Main input loop -- end if keypress 'q'
         if ((ch == KEY_UP && zoom != ZOOM_1m) || (ch == KEY_DOWN && zoom != ZOOM_5y) ||
@@ -479,12 +478,12 @@ void graph_printw(WINDOW* window, Info* symbol_info, Info* symbol_info2) {
                 start_date = today_date;
                 start_date.tm_mon -= zoom_months[zoom];
             }
-            graph_draw(window, symbol_info, symbol_info2, &start_date, zoom);
+            graph_draw(window, pInfo, pInfo2, &start_date, zoom);
         }
     }
 }
 
-void graph_draw(WINDOW* window, Info* symbol_info, Info* symbol_info2, struct tm* start_time, int zoom) {
+void graph_draw(WINDOW* window, Info* pInfo, Info* pInfo2, struct tm* start_time, int zoom) {
     wmove(window, 0, 0); // Instead of clear()ing, move to the top left corner and re-print
     int cols, rows;
     getmaxyx(window, rows, cols);
@@ -504,36 +503,36 @@ void graph_draw(WINDOW* window, Info* symbol_info, Info* symbol_info2, struct tm
     seconds = difftime(mktime(start_time), mktime(five_y));
     int starting_index = (int) ((1.0 / DAYS_TO_BUSINESS_DAYS_RATIO) * seconds / 86400.0);
 
-    double max = symbol_info->points[starting_index], min = symbol_info->points[starting_index];
+    double max = pInfo->points[starting_index], min = pInfo->points[starting_index];
     int k = 0;
     while (max == EMPTY) // If initial max is EMPTY, get first non-EMPTY value
-        max = symbol_info->points[++k];
+        max = pInfo->points[++k];
     if (k > 0) // Do the same thing with min
         min = max;
     for (int i = starting_index + 1; i < trading_days + starting_index; i++) {
-        if (symbol_info->points[i] != EMPTY) { // Ignore EMPTY values
-            if (symbol_info->points[i] > max) // Find max and min values for graph upper/lower bounds
-                max = symbol_info->points[i];
-            if (symbol_info->points[i] < min)
-                min = symbol_info->points[i];
+        if (pInfo->points[i] != EMPTY) { // Ignore EMPTY values
+            if (pInfo->points[i] > max) // Find max and min values for graph upper/lower bounds
+                max = pInfo->points[i];
+            if (pInfo->points[i] < min)
+                min = pInfo->points[i];
         }
     }
     double line_diff = (max - min) / rows, day_close; // Each line includes data point up to line_diff below
 
     double max2 = 0, min2 = 0, line_diff2 = 0, day_close2 = 0;
-    if (symbol_info2 != NULL) {
-        max2 = symbol_info2->points[starting_index], min2 = symbol_info2->points[starting_index];
+    if (pInfo2 != NULL) {
+        max2 = pInfo2->points[starting_index], min2 = pInfo2->points[starting_index];
         k = 0;
         while (max2 == EMPTY) // If initial max is EMPTY, get first non-EMPTY value
-            max2 = symbol_info2->points[++k];
+            max2 = pInfo2->points[++k];
         if (k > 0) // Do the same thing with min
             min2 = max2;
         for (int i = starting_index + 1; i < trading_days + starting_index; i++) {
-            if (symbol_info2->points[i] != EMPTY) { // Ignore EMPTY values
-                if (symbol_info2->points[i] > max2) // Find max and min values for graph upper/lower bounds
-                    max2 = symbol_info2->points[i];
-                if (symbol_info2->points[i] < min2)
-                    min2 = symbol_info2->points[i];
+            if (pInfo2->points[i] != EMPTY) { // Ignore EMPTY values
+                if (pInfo2->points[i] > max2) // Find max and min values for graph upper/lower bounds
+                    max2 = pInfo2->points[i];
+                if (pInfo2->points[i] < min2)
+                    min2 = pInfo2->points[i];
             }
         }
         line_diff2 = (max2 - min2) / rows; // Each line includes data point up to line_diff below
@@ -542,20 +541,20 @@ void graph_draw(WINDOW* window, Info* symbol_info, Info* symbol_info2, struct tm
     for (int i = rows; i >= 0; i--) {
         if (i % ROWS_SPACING == 0) // Print y-axis price labels with width 10
             wprintw(window, "%9.2lf ", (max - ((rows - i) * line_diff)));
-        else if (symbol_info2 != NULL && (i - 1) % ROWS_SPACING == 0) { // Print comparison price label above
+        else if (pInfo2 != NULL && (i - 1) % ROWS_SPACING == 0) { // Print comparison price label above
             wattron(window, RED);
             wprintw(window, "%9.2lf ", (max2 - ((rows - i) * line_diff2)));
             wattroff(window, RED);
         } else wprintw(window, "          "); // Indent width 10 otherwise
 
         for (int j = 0; j < cols; j++) {
-            day_close = symbol_info->points[starting_index + (int) ((double) j * trading_days / cols)]; // Get close prices
-            if (symbol_info2 != NULL)
-                day_close2 = symbol_info2->points[starting_index + (int) ((double) j * trading_days / cols)];
+            day_close = pInfo->points[starting_index + (int) ((double) j * trading_days / cols)]; // Get close prices
+            if (pInfo2 != NULL)
+                day_close2 = pInfo2->points[starting_index + (int) ((double) j * trading_days / cols)];
 
             if (day_close <= (max - ((rows - i) * line_diff)) && day_close > (min + ((i - 1) * line_diff)))
                 waddch(window, ACS_DIAMOND); // Print diamond if close price is within line_diff
-            else if (symbol_info2 != NULL && day_close2 <= (max2 - ((rows - i) * line_diff2)) &&
+            else if (pInfo2 != NULL && day_close2 <= (max2 - ((rows - i) * line_diff2)) &&
                      day_close2 > (min2 + ((i - 1) * line_diff2))) {
                 wattron(window, RED);
                 waddch(window, ACS_DIAMOND); // Print RED diamond if close price is within line_diff
@@ -588,19 +587,19 @@ void graph_draw(WINDOW* window, Info* symbol_info, Info* symbol_info2, struct tm
 
     waddch(window, '\n');
     waddch(window, '\n');
-    wprintw(window, "%s", symbol_info->symbol); // Empty line as spacing, then print key containing the symbol(s) and diamond
+    wprintw(window, "%s", pInfo->symbol); // Empty line as spacing, then print key containing the symbol(s) and diamond
     // with color
     waddch(window, ACS_DIAMOND);
-    if (symbol_info2 != NULL) {
+    if (pInfo2 != NULL) {
         wattron(window, RED);
-        wprintw(window, " %s", symbol_info2->symbol);
+        wprintw(window, " %s", pInfo2->symbol);
         waddch(window, ACS_DIAMOND);
         wattroff(window, RED);
     }
     waddch(window, ' ');
-    size_t offset = (cols / 2) - (11 + strlen(symbol_info->symbol)); // Center zoom level
-    if (symbol_info2 != NULL)
-        offset -= strlen(symbol_info2->symbol) + 2;
+    size_t offset = (cols / 2) - (11 + strlen(pInfo->symbol)); // Center zoom level
+    if (pInfo2 != NULL)
+        offset -= strlen(pInfo2->symbol) + 2;
     for (unsigned int i = 0; i < offset; i++)
         waddch(window, ' '); // Center text
     const char* str[9] = {"5y", "4y", "3y", "2y", "1y", "9m", "6m", "3m", "1m"}; // Zoom level

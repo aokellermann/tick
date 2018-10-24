@@ -41,7 +41,7 @@ typedef struct key_ring {
 } Key_Ring;
 
 typedef struct ref_data {
-    char** symbols;     // Sorted
+    char** slugs;     // Sorted
     char** names;
     size_t length;
     int64_t time_loaded;
@@ -60,6 +60,7 @@ typedef struct info_array Info_Array;
 
 typedef struct info {
     int api_provider;                   // IEX, ALPHAVANTAGE, COINMARKETCAP
+    char slug[SYMBOL_MAX_LENGTH];       // API call string -- ex. AAPL, DSENX, RIPPLE, ZCASH
     /** API DATA **/
 
     /* Company */
@@ -230,9 +231,9 @@ Info_Array* info_array_init_length(size_t length);
 /**
  * Appends a security to an Info_Array.
  * @param pInfo_Array the Info_Array to append
- * @param symbol the symbol of the new security
+ * @param slug the symbol of the new security
  */
-void info_array_append(Info_Array* pInfo_Array, const char* symbol);
+void info_array_append(Info_Array* pInfo_Array, const char* slug);
 
 /**
  * writefunction for cURL HTTP GET
@@ -271,7 +272,7 @@ void api_iex_store_info(Info* pInfo, Data_Level data_level);
  * @param pInfo_Array the Info_Array
  * @param data_level endpoints to query
  */
-String* api_iex_get_data_string(char** symbol_array, size_t len,
+String* api_iex_get_data_string(char** slug_array, size_t len,
                                 Data_Level data_level);
 
 /**
@@ -383,9 +384,9 @@ Ref_Data* crypto_cache_read(void);
  * @param pRef_Data
  * @param jobj
  */
-void ref_data_store_json(Ref_Data* pRef_Data, const Json* jobj);
+void ref_data_store_json_iex(Ref_Data* pRef_Data, const Json* jobj);
 
-void ref_data_store_json_crypto(Ref_Data* pRef_Data, const Json* jobj);
+void ref_data_store_json_cmc(Ref_Data* pRef_Data, const Json* jobj);
 
 /**
  * Stores the data found in IEX formatted jobj in the Info_Array.
@@ -397,9 +398,9 @@ void info_array_store_endpoints_json(Info_Array* pInfo_Array, const Json* jobj);
 /**
  * Stores the data found in IEX formatted jsymbol in the Info_Array.
  * @param pInfo
- * @param jsymbol
+ * @param jslug
  */
-void info_store_endpoints_json(Info* pInfo, const Json* jsymbol);
+void info_store_endpoints_json(Info* pInfo, const Json* jslug);
 
 /**
  * IEX quote endpoint.
@@ -461,21 +462,21 @@ void info_store_earnings_json(Info* pInfo, const Json* jearnings);
  * Searches through an Info_Array and returns a ponter to the Info which has the same symbol as
  * the function's argument. If not found, returns NULL.
  * @param pInfo_Array the Info_Array to search
- * @param symbol the symbol to match
+ * @param slug the symbol to match
  * @return valid Info* or NULL if not found
  */
-Info* info_array_find_symbol(const Info_Array* pInfo_Array, const char* symbol);
+Info* info_array_find_slug(const Info_Array* pInfo_Array, const char* slug);
 
 /**
  * Recursive binary search function for Ref_Data. Returns the index of the security with the given
  * symbol.
  * @param pRef_Data the Ref_Data to search
- * @param symbol symbol of the security to find
+ * @param slug symbol of the security to find
  * @param left left-most index to start search
  * @param right right-most index to start search
  * @return index of security if found, -1 if not found
  */
-int ref_data_get_index_from_symbol_bsearch(const Ref_Data* pRef_Data, const char* symbol,
+int ref_data_get_index_from_slug_bsearch(const Ref_Data* pRef_Data, const char* slug,
                                          size_t left, size_t right);
 
 /**
@@ -493,10 +494,10 @@ int ref_data_get_index_from_name_bsearch(const Ref_Data* pRef_Data, const char* 
 /**
  * Recursively searches pInfo_Array and pInfo_Array->peers to find an Info* with the given symbol
  * @param pInfo_Array the Info_Array to search
- * @param symbol the symbol to find
+ * @param slug the symbol to find
  * @return Info* of found symbol or NULL if not found
  */
-Info* info_array_find_symbol_recursive(const Info_Array* pInfo_Array, const char* symbol);
+Info* info_array_find_slug_recursive(const Info_Array* pInfo_Array, const char* slug);
 
 /**
  * Reallocates pInfo->points with size trading days. Moves all values to end of the array and sets
