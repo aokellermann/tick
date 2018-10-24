@@ -538,7 +538,23 @@ void api_ref_data_write_cache(void) {
     if (pString == NULL)
         return;
 
+    Json* jobj = json_tokener_parse(pString->data);
+    if (jobj == NULL) {
+        string_destroy(&pString);
+        return;
+    }
+
+    for (size_t i = json_object_array_length(jobj) - 1; i != 0; i--) {
+        if (streq(json_object_get_string(json_object_object_get(json_object_array_get_idx(jobj, i),
+                "type")), "crypto"))
+            json_object_array_del_idx(jobj, i, 1);
+        else break;
+    }
+
+    strcpy(pString->data, json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PLAIN));
+    pString->len = strlen(pString->data);
     string_write_file(pString, ref_cache_file_path);
+    json_object_put(jobj);
     string_destroy(&pString);
 }
 
