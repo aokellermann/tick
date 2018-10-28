@@ -168,3 +168,12 @@ size_t string_get_num_lines(String* pString) {
 
     return lines;
 }
+
+time_t date_to_time(const char* date_str) {
+    struct tm date = {0};
+    sscanf(date_str, "%d-%d-%dT%d:%d:%d.", &date.tm_year, &date.tm_mon, &date.tm_mday,
+            &date.tm_hour, &date.tm_min, &date.tm_sec);
+    date.tm_year -= 1900;
+    date.tm_mon --;
+    return mktime(&date);
+}

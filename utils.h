@@ -39,6 +39,7 @@
 #include <ctype.h>
 #include <json-c/json_tokener.h>
 #include <sys/stat.h>
+#include <time.h>
 
 typedef struct string {
     char* data;
@@ -158,5 +159,12 @@ int csv_goto_next_value(String* pString, size_t* idx);
  * @return size_t number of lines
  */
 size_t string_get_num_lines(String* pString);
+
+/**
+ * Returns an ISO 8601 formatted string as time_t
+ * @param date_str ISO 8601 formatted string
+ * @return time_t
+ */
+time_t date_to_time(const char* date_str);
 
 #endif

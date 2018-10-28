@@ -641,44 +641,20 @@ void ref_data_store_json_iex(Ref_Data* pRef_Data, const Json* jobj) {
         pRef_Data->names[i][NAME_MAX_LENGTH - 1] = '\0';
     }
 
-    idx = json_object_array_get_idx(jobj, 1);
-
-    // Date format: yyyy-mm-dd
-    const char* date = json_object_get_string(json_object_object_get(idx, "date"));
-    char year[5] = {0}, month[3] = {0}, day[3] = {0};
-    strncpy(year, date, 4);
-    strncpy(month, &date[5], 2);
-    strncpy(day, &date[8], 2);
-    struct tm time = {
-            .tm_year = atoi(year) - 1900,
-            .tm_mon = atoi(month) - 1,
-            .tm_mday = atoi(day)
-    };
-    pRef_Data->time_loaded = mktime(&time);
+    pRef_Data->time_loaded = date_to_time(json_object_get_string(json_object_object_get(
+            json_object_array_get_idx(jobj, 1), "date")));
 }
 
 void ref_data_store_json_cmc(Ref_Data* pRef_Data, const Json* jobj) {
-    char date[DATE_MAX_LENGTH];
-    strcpy(date, json_object_get_string(json_object_object_get(json_object_object_get(jobj,
-            "status"), "timestamp")));
-    for (size_t i = 0; i < strlen(date); i++) {
-        if (date[i] == 'T') {
-            date[i] = '\0';
-            break;
-        }
-    }
-    struct tm time = {0};
-    sscanf(date, "%d-%d-%d", &time.tm_year, &time.tm_mon, &time.tm_mday);
-    time.tm_year -= 1900;
-    time.tm_mon--;
-    pRef_Data->time_loaded = mktime(&time);
-
     Json* data = json_object_object_get(jobj, "data"), * idx;
     for (size_t i = 0; i < pRef_Data->length; i++) {
         idx = json_object_array_get_idx(data, i);
         strcpy(pRef_Data->names[i], json_object_get_string(json_object_object_get(idx, "name")));
         strcpy(pRef_Data->slugs[i], json_object_get_string(json_object_object_get(idx, "id")));
     }
+
+    pRef_Data->time_loaded = date_to_time(json_object_get_string(json_object_object_get(
+            json_object_object_get(jobj, "status"), "timestamp")));
 }
 
 void info_array_store_endpoints_json(Info_Array* pInfo_Array, const Json* jobj) {
