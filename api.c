@@ -278,6 +278,73 @@ String* api_iex_get_data_string(char** slug_array, size_t len,
     return string_array[0];
 }
 
+void api_cmc_store_info_array(Info_Array* pInfo_Array) {
+    int is_crypto[pInfo_Array->length];
+    memset(is_crypto, 0, pInfo_Array->length * sizeof(int));
+    for (size_t i = 0; i < pInfo_Array->length; i++) {
+        if (pInfo_Array->array[i]->api_provider == EMPTY &&
+            ref_data_get_index_from_name_bsearch(crypto_cache, pInfo_Array->array[i]->symbol, 0,
+                                                 crypto_cache->length - 1)) {
+            is_crypto[i] = 1;
+        }
+    }
+
+    char url[LONG_URL_MAX_LENGTH];
+    sprintf(url, "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?"
+                 "CMC_PRO_API_KEY=%s&symbol=", api_keys->keys[API_PROVIDER_COINMARKETCAP]);
+
+    for (size_t i = 0; i < pInfo_Array->length; i++)
+        if (is_crypto[i])
+            sprintf(&url[strlen(url)], "%s,", pInfo_Array->array[i]->slug);
+
+    url[strlen(url) - 1] = '\0'; // Remove last comma
+    String* pString = api_curl_url(url);
+    if (pString == NULL)
+        return;
+
+    Json* jobj = json_tokener_parse(pString->data);
+    if (jobj == NULL) {
+        string_destroy(&pString);
+        return;
+    }
+
+    Json* status = json_object_object_get(jobj, "status"),
+        * data = json_object_object_get(jobj, "data"), * idx, * quote;
+    if (json_object_get_int64(json_object_object_get(status, "error_code"))) {
+        json_object_put(jobj);
+        string_destroy(&pString);
+        return;
+    }
+
+    Info* pInfo;
+    for (size_t i = 0; i < pInfo_Array->length; i++) {
+        if (is_crypto[i]) {
+            idx = json_object_object_get(data, pInfo_Array->array[i]->slug);
+            quote = json_object_object_get(json_object_object_get(idx, "quote"), "USD");
+            pInfo = pInfo_Array->array[i];
+
+            strcpy(pInfo->name, json_object_get_string(json_object_object_get(idx, "name")));
+            strcpy(pInfo->symbol, json_object_get_string(json_object_object_get(idx, "symbol")));
+
+            pInfo->price = json_object_get_double(json_object_object_get(quote, "price"));
+            pInfo->volume_1d = (int64_t) json_object_get_double(json_object_object_get(quote,
+                    "volume_24h"));
+            pInfo->price_last_close = pInfo->price / (json_object_get_double(
+                    json_object_object_get(quote, "percent_change_24h")) / 100.0 + 1);
+            pInfo->price_7d = pInfo->price / (json_object_get_double(
+                    json_object_object_get(quote, "percent_change_7d")) / 100.0 + 1);
+            pInfo->price_30d = pInfo->price_7d;
+            pInfo->marketcap = (int64_t) json_object_get_double(json_object_object_get(quote,
+                    "market_cap"));
+            pInfo->intraday_time = date_to_time(json_object_get_string(json_object_object_get
+                    (quote, "last_updated")));
+        }
+    }
+
+    json_object_put(jobj);
+    string_destroy(&pString);
+}
+
 void* api_alphavantage_store_info(void* vpInfo) {
     Info* pInfo = vpInfo;
     if (api_keys->keys[API_PROVIDER_ALPHAVANTAGE][0] == '\0' || pInfo->slug[0] == '\0')

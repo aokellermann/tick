@@ -21,6 +21,7 @@ typedef enum data_level {
 #define SLUG_MAX_LENGTH 64
 #define NAME_MAX_LENGTH 128
 #define URL_MAX_LENGTH 2048
+#define LONG_URL_MAX_LENGTH 65536
 #define INFO_MAX_LENGTH 2048
 #define NEWS_MAX_LENGTH 10500
 #define KEY_MAX_LENGTH 256
@@ -250,7 +251,7 @@ size_t string_writefunc(void* ptr, size_t size, size_t nmemb, String* pString);
 String* api_curl_url(const char* url);
 
 /**
- * Calls IEX's batch API to store data in pInfo_Array. symbol must be a valid string in each Info
+ * Calls IEX's batch API to store data in pInfo_Array. slug must be a valid string in each Info
  * @param pInfo_Array the Info_Array to fill
  * @param data_level the level of data to store
  */
@@ -275,6 +276,12 @@ void api_iex_store_info(Info* pInfo, Data_Level data_level);
  */
 String* api_iex_get_data_string(char** slug_array, size_t len,
                                 Data_Level data_level);
+
+/**
+ * Calls CMC's API to store data in pInfo_Array. slug must be a valid string in each Info
+ * @param pInfo_Array the Info_Array to fill
+ */
+void api_cmc_store_info_array(Info_Array* pInfo_Array);
 
 /**
  * Designed for threading
