@@ -588,23 +588,20 @@ void api_crypto_cache_init(void) {
 
 void api_crypto_cache_write(void) {
     char url[URL_MAX_LENGTH];
-    sprintf(url, "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?sort=name"
-                 "&limit=5000&CMC_PRO_API_KEY=%s", api_keys->keys[API_PROVIDER_COINMARKETCAP]);
+    sprintf(url, "https://pro-api.coinmarketcap.com/v1/cryptocurrency/map?CMC_PRO_API_KEY=%s",
+            api_keys->keys[API_PROVIDER_COINMARKETCAP]);
     String* pString = api_curl_url(url);
-    puts("Curled cmc");
     if (pString == NULL)
         return;
 
     Json* jobj = json_tokener_parse(pString->data);
-    Json* data = json_object_object_get(jobj, "data"), * idx;
-    for (size_t i = 0; i < json_object_array_length(data); i++) {
-        idx = json_object_array_get_idx(data, i);
-        json_object_object_del(idx, "quote");
+    if (jobj == NULL) {
+        string_destroy(&pString);
+        return;
     }
 
-    const char* str = json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PLAIN);
-    String* smaller = string_init_c_string(str);
-
+    String* smaller = string_init_c_string(json_object_to_json_string_ext(jobj,
+            JSON_C_TO_STRING_PLAIN));
     string_write_file(smaller, crypto_cache_file_path);
     json_object_put(jobj);
     string_destroy(&pString);
@@ -680,7 +677,7 @@ void ref_data_store_json_cmc(Ref_Data* pRef_Data, const Json* jobj) {
     for (size_t i = 0; i < pRef_Data->length; i++) {
         idx = json_object_array_get_idx(data, i);
         strcpy(pRef_Data->names[i], json_object_get_string(json_object_object_get(idx, "name")));
-        strcpy(pRef_Data->slugs[i], json_object_get_string(json_object_object_get(idx, "slug")));
+        strcpy(pRef_Data->slugs[i], json_object_get_string(json_object_object_get(idx, "id")));
     }
 }
 
