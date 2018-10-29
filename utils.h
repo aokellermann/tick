@@ -167,4 +167,11 @@ size_t string_get_num_lines(String* pString);
  */
 time_t date_to_time(const char* date_str);
 
+/**
+ * Swaps two size_t's
+ * @param a pointer to first size_t
+ * @param b pointer to second size_t
+ */
+void swap_size_t(size_t* a, size_t* b);
+
 #endif

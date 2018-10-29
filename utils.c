@@ -177,3 +177,9 @@ time_t date_to_time(const char* date_str) {
     date.tm_mon --;
     return mktime(&date);
 }
+
+void swap_size_t(size_t* a, size_t* b) {
+    const size_t temp = *a;
+    *a = *b;
+    *b = temp;
+}
