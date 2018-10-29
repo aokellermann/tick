@@ -284,6 +284,8 @@ String* api_iex_get_data_string(char** slug_array, size_t len,
  */
 void api_cmc_store_info_array(Info_Array* pInfo_Array);
 
+void api_cmc_store_info(Info* pInfo);
+
 /**
  * Designed for threading
  *
@@ -466,6 +468,8 @@ void info_store_news_json(Info* pInfo, const Json* jnews);
  * @param jearnings
  */
 void info_store_earnings_json(Info* pInfo, const Json* jearnings);
+
+void info_store_quote_cmc_json(Info* pInfo, const Json* jquote);
 
 /**
  * Searches through an Info_Array and returns a ponter to the Info which has the same symbol as

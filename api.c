@@ -310,36 +310,46 @@ void api_cmc_store_info_array(Info_Array* pInfo_Array) {
         return;
     }
 
-    Json* status = json_object_object_get(jobj, "status"),
-        * data = json_object_object_get(jobj, "data"), * idx, * quote;
+    Json* status = json_object_object_get(jobj, "status");
     if (json_object_get_int64(json_object_object_get(status, "error_code"))) {
         json_object_put(jobj);
         string_destroy(&pString);
         return;
     }
 
-    Info* pInfo;
-    for (size_t i = 0; i < pInfo_Array->length; i++) {
-        if (is_crypto[i]) {
-            idx = json_object_object_get(data, pInfo_Array->array[i]->slug);
-            quote = json_object_object_get(json_object_object_get(idx, "quote"), "USD");
-            pInfo = pInfo_Array->array[i];
+    for (size_t i = 0; i < pInfo_Array->length; i++)
+        if (is_crypto[i])
+            info_store_quote_cmc_json(pInfo_Array->array[i], json_object_object_get(
+                    json_object_object_get(jobj, "data"), pInfo_Array->array[i]->slug));
 
-            strcpy(pInfo->name, json_object_get_string(json_object_object_get(idx, "name")));
-            strcpy(pInfo->symbol, json_object_get_string(json_object_object_get(idx, "symbol")));
+    json_object_put(jobj);
+    string_destroy(&pString);
+}
 
-            pInfo->price = json_object_get_double(json_object_object_get(quote, "price"));
-            pInfo->volume_1d = json_object_get_int64(json_object_object_get(quote, "volume_24h"));
-            pInfo->price_last_close = pInfo->price / (json_object_get_double(
-                    json_object_object_get(quote, "percent_change_24h")) / 100.0 + 1);
-            pInfo->price_7d = pInfo->price / (json_object_get_double(
-                    json_object_object_get(quote, "percent_change_7d")) / 100.0 + 1);
-            pInfo->price_30d = pInfo->price_7d;
-            pInfo->marketcap = json_object_get_int64(json_object_object_get(quote, "market_cap"));
-            pInfo->intraday_time = date_to_time(json_object_get_string(json_object_object_get
-                    (quote, "last_updated")));
-        }
+void api_cmc_store_info(Info* pInfo) {
+    char url[URL_MAX_LENGTH];
+    sprintf(url, "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?CMC_PRO_API_KEY"
+                 "=%s&symbol=%s", api_keys->keys[API_PROVIDER_COINMARKETCAP], pInfo->slug);
+
+    String* pString = api_curl_url(url);
+    if (pString == NULL)
+        return;
+
+    Json* jobj = json_tokener_parse(pString->data);
+    if (jobj == NULL) {
+        string_destroy(&pString);
+        return;
     }
+
+    Json* status = json_object_object_get(jobj, "status");
+    if (json_object_get_int64(json_object_object_get(status, "error_code"))) {
+        json_object_put(jobj);
+        string_destroy(&pString);
+        return;
+    }
+
+    info_store_quote_cmc_json(pInfo, json_object_object_get(json_object_object_get(jobj, "data"),
+            pInfo->slug));
 
     json_object_put(jobj);
     string_destroy(&pString);
@@ -929,6 +939,24 @@ void info_store_earnings_json(Info* pInfo, const Json* jearnings) {
         else if (report_date != NULL)
             strcpy(pInfo->fiscal_period[i], json_object_get_string(report_date));
     }
+}
+
+void info_store_quote_cmc_json(Info* pInfo, const Json* jquote) {
+    pInfo->api_provider = API_PROVIDER_COINMARKETCAP;
+    strcpy(pInfo->name, json_object_get_string(json_object_object_get(jquote, "name")));
+    strcpy(pInfo->symbol, json_object_get_string(json_object_object_get(jquote, "symbol")));
+
+    Json* data = json_object_object_get(json_object_object_get(jquote, "quote"), "USD");
+    pInfo->price = json_object_get_double(json_object_object_get(data, "price"));
+    pInfo->volume_1d = json_object_get_int64(json_object_object_get(data, "volume_24h"));
+    pInfo->price_last_close = pInfo->price / (json_object_get_double(
+            json_object_object_get(data, "percent_change_24h")) / 100.0 + 1);
+    pInfo->price_7d = pInfo->price / (json_object_get_double(
+            json_object_object_get(data, "percent_change_7d")) / 100.0 + 1);
+    pInfo->price_30d = pInfo->price_7d;
+    pInfo->marketcap = json_object_get_int64(json_object_object_get(data, "market_cap"));
+    pInfo->intraday_time = date_to_time(json_object_get_string(json_object_object_get
+                                                                       (data, "last_updated")));
 }
 
 Info* info_array_find_slug(const Info_Array* pInfo_Array, const char* slug) {
