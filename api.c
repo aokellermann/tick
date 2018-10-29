@@ -60,11 +60,13 @@ Ref_Data* ref_data_init_length(size_t length) {
     pointer_alloc_check(pRef_Data);
     pRef_Data->slugs = malloc(length * sizeof(char*));
     pRef_Data->names = malloc(length * sizeof(char*));
+    pRef_Data->sorted_indices = malloc(length * sizeof(size_t));
     pointer_alloc_check(pRef_Data->slugs);
     pointer_alloc_check(pRef_Data->names);
     for (size_t i = 0; i < length; i++) {
         pRef_Data->slugs[i] = calloc(SLUG_MAX_LENGTH, sizeof(char));
         pRef_Data->names[i] = calloc(NAME_MAX_LENGTH, sizeof(char));
+        pRef_Data->sorted_indices[i] = i;
         pointer_alloc_check(pRef_Data->slugs[i]);
         pointer_alloc_check(pRef_Data->names[i]);
     }
@@ -710,18 +712,20 @@ void ref_data_store_json_iex(Ref_Data* pRef_Data, const Json* jobj) {
 
     pRef_Data->time_loaded = date_to_time(json_object_get_string(json_object_object_get(
             json_object_array_get_idx(jobj, 1), "date")));
+    ref_data_quicksort(pRef_Data, 0, pRef_Data->length);
 }
 
 void ref_data_store_json_cmc(Ref_Data* pRef_Data, const Json* jobj) {
     Json* data = json_object_object_get(jobj, "data"), * idx;
     for (size_t i = 0; i < pRef_Data->length; i++) {
         idx = json_object_array_get_idx(data, i);
-        strcpy(pRef_Data->names[i], json_object_get_string(json_object_object_get(idx, "name")));
         strcpy(pRef_Data->slugs[i], json_object_get_string(json_object_object_get(idx, "id")));
+        strcpy(pRef_Data->names[i], json_object_get_string(json_object_object_get(idx, "slug")));
     }
 
     pRef_Data->time_loaded = date_to_time(json_object_get_string(json_object_object_get(
             json_object_object_get(jobj, "status"), "timestamp")));
+    ref_data_quicksort(pRef_Data, 0, pRef_Data->length);
 }
 
 void info_array_store_endpoints_json(Info_Array* pInfo_Array, const Json* jobj) {
@@ -999,6 +1003,23 @@ void info_chart_fill_empty(Info* pInfo, int trading_days) {
     pInfo->num_points = trading_days;
 }
 
+void ref_data_quicksort(Ref_Data* pRef_Data, size_t start, size_t len) {
+    if (len <= 1)
+        return;
+
+    size_t pivot = 0, * start_ptr = &pRef_Data->sorted_indices[start];
+    swap_size_t(start_ptr + ((unsigned int) rand() % len), start_ptr + len - 1);
+
+    for (size_t i = 0; i < len; i++)
+        if (strcmp(pRef_Data->names[start_ptr[i]], pRef_Data->names[start_ptr[len - 1]]) < 0)
+            swap_size_t(&start_ptr[i], &start_ptr[pivot++]);
+
+    swap_size_t(&start_ptr[pivot], &start_ptr[len - 1]);
+
+    ref_data_quicksort(pRef_Data, start, pivot++);
+    ref_data_quicksort(pRef_Data, start + pivot, len - pivot);
+}
+
 void key_ring_destroy(Key_Ring** phKeys) {
     free(*phKeys);
     *phKeys = NULL;
@@ -1015,6 +1036,7 @@ void ref_data_destroy(Ref_Data** phRef_Data) {
     }
     free(pRef_data->slugs);
     free(pRef_data->names);
+    free(pRef_data->sorted_indices);
     free(*phRef_Data);
     *phRef_Data = NULL;
 }

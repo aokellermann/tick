@@ -45,6 +45,7 @@ typedef struct key_ring {
 typedef struct ref_data {
     char** slugs;     // Sorted
     char** names;
+    size_t* sorted_indices;
     size_t length;
     int64_t time_loaded;
 } Ref_Data;
@@ -514,6 +515,8 @@ Info* info_array_find_slug_recursive(const Info_Array* pInfo_Array, const char* 
  * @param trading_days the size to realloc
  */
 void info_chart_fill_empty(Info* pInfo, int trading_days);
+
+void ref_data_quicksort(Ref_Data* pRef_Data, size_t start, size_t len);
 
 /**
  * Destroys Key_Ring object and frees memory. Sets the pointer of the Key_Ring to NULL
