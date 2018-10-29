@@ -329,15 +329,13 @@ void api_cmc_store_info_array(Info_Array* pInfo_Array) {
             strcpy(pInfo->symbol, json_object_get_string(json_object_object_get(idx, "symbol")));
 
             pInfo->price = json_object_get_double(json_object_object_get(quote, "price"));
-            pInfo->volume_1d = (int64_t) json_object_get_double(json_object_object_get(quote,
-                    "volume_24h"));
+            pInfo->volume_1d = json_object_get_int64(json_object_object_get(quote, "volume_24h"));
             pInfo->price_last_close = pInfo->price / (json_object_get_double(
                     json_object_object_get(quote, "percent_change_24h")) / 100.0 + 1);
             pInfo->price_7d = pInfo->price / (json_object_get_double(
                     json_object_object_get(quote, "percent_change_7d")) / 100.0 + 1);
             pInfo->price_30d = pInfo->price_7d;
-            pInfo->marketcap = (int64_t) json_object_get_double(json_object_object_get(quote,
-                    "market_cap"));
+            pInfo->marketcap = json_object_get_int64(json_object_object_get(quote, "market_cap"));
             pInfo->intraday_time = date_to_time(json_object_get_string(json_object_object_get
                     (quote, "last_updated")));
         }
