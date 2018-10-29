@@ -281,15 +281,18 @@ String* api_iex_get_data_string(char** slug_array, size_t len,
 }
 
 void api_cmc_store_info_array(Info_Array* pInfo_Array) {
-    int is_crypto[pInfo_Array->length];
+    int is_crypto[pInfo_Array->length], has_cryptos = 0;
     memset(is_crypto, 0, pInfo_Array->length * sizeof(int));
     for (size_t i = 0; i < pInfo_Array->length; i++) {
         if (pInfo_Array->array[i]->api_provider == EMPTY &&
-            ref_data_get_index_from_name_bsearch(crypto_cache, pInfo_Array->array[i]->symbol, 0,
+            ref_data_get_index_from_slug_bsearch(crypto_cache, pInfo_Array->array[i]->slug, 0,
                                                  crypto_cache->length - 1)) {
             is_crypto[i] = 1;
+            has_cryptos = 1;
         }
     }
+    if (!has_cryptos)
+        return;
 
     char url[LONG_URL_MAX_LENGTH];
     sprintf(url, "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?"
@@ -440,31 +443,15 @@ void* api_coinmarketcap_store_info(void* vpInfo) {
 
 void api_store_info_array(Info_Array* pInfo_Array, Data_Level data_level) {
     api_iex_store_info_array(pInfo_Array, data_level);
+    api_cmc_store_info_array(pInfo_Array);
 
-    // All IEX securities are accounted for
+    // All IEX and CMC
     Info* pInfo;
     pthread_t threads[pInfo_Array->length];
     int open_threads[pInfo_Array->length];
     memset(open_threads, 0, pInfo_Array->length * sizeof(int));
     for (size_t i = 0; i < pInfo_Array->length; i++) {
         pInfo = pInfo_Array->array[i];
-        if (pInfo->api_provider == EMPTY && !streq(pInfo->slug, "USD$")) {
-            open_threads[i] = 1;
-            if (pthread_create(&threads[i], NULL, api_coinmarketcap_store_info, pInfo)) // Crypto
-                EXIT_MSG("Error creating thread!");
-        }
-    }
-
-    // All IEX and CMC are accounted for
-    for (size_t i = 0; i < pInfo_Array->length; i++) {
-        pInfo = pInfo_Array->array[i];
-        if (open_threads[i]) { // Join all open threads
-            if (pthread_join(threads[i], NULL))
-                EXIT_MSG("Error joining thread!");
-
-            open_threads[i] = 0;
-        }
-
         if (pInfo->api_provider == EMPTY && !streq(pInfo->slug, "USD$")) {
             open_threads[i] = 1;
             if (pthread_create(&threads[i], NULL, api_alphavantage_store_info, pInfo))
@@ -483,11 +470,40 @@ void api_store_info_array(Info_Array* pInfo_Array, Data_Level data_level) {
 }
 
 void api_store_info(Info* pInfo, Data_Level data_level) {
-    api_iex_store_info(pInfo, data_level);
-    if (pInfo->api_provider == EMPTY && api_coinmarketcap_store_info(pInfo) == NULL &&
-        api_alphavantage_store_info(pInfo) == NULL)
-        return;
+    const char* colon_ptr = strchr(pInfo->slug, ':');
+    size_t index_of_colon = colon_ptr - pInfo->slug;
+    if (colon_ptr == NULL || index_of_colon > 3) {
+        if (ref_data_get_index_from_slug_bsearch(ref_cache, pInfo->slug, 0, ref_cache->length - 1))
+            api_iex_store_info(pInfo, data_level);
+        else if (ref_data_get_index_from_name_bsearch(crypto_cache, pInfo->slug, 0,
+                crypto_cache->length - 1))
+            api_cmc_store_info(pInfo);
+        else api_alphavantage_store_info(pInfo);
+    } else {
+        char provider_str[4];
+        strncpy(provider_str, pInfo->slug, index_of_colon);
+        provider_str[index_of_colon] = '\0';
+        Api_Provider provider;
+        for (provider = API_PROVIDER_IEX; provider < API_PROVIDER_MAX; provider++)
+            if (streq(provider_str, api_abbreviations[provider]))
+                break;
 
+        memmove(pInfo->slug, &pInfo->slug[index_of_colon + 1],
+                strlen(&pInfo->slug[index_of_colon + 1]) + 1);
+
+        int index;
+        if (provider == API_PROVIDER_IEX && ref_data_get_index_from_slug_bsearch(ref_cache,
+                pInfo->slug, 0, ref_cache->length - 1)) {
+            api_iex_store_info(pInfo, data_level);
+        } else if (provider == API_PROVIDER_COINMARKETCAP &&
+                   (index = ref_data_get_index_from_name_bsearch(crypto_cache, pInfo->slug, 0,
+                                                                 crypto_cache->length - 1))) {
+            strcpy(pInfo->slug, crypto_cache->slugs[crypto_cache->sorted_indices[index]]);
+            api_cmc_store_info(pInfo);
+        } else if (provider == API_PROVIDER_ALPHAVANTAGE)
+            api_alphavantage_store_info(pInfo);
+        else return;
+    }
     info_store_portfolio_data(pInfo);
 }
 
