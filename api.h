@@ -176,6 +176,8 @@ extern char api_names[API_PROVIDER_MAX][NAME_MAX_LENGTH];
 
 extern char api_websites[API_PROVIDER_MAX][URL_MAX_LENGTH];
 
+extern const char usd_slug[SLUG_MAX_LENGTH];
+
 /**
  * Sets global variable keys_file_path to "$HOME/.tick_api_keys.json"
  */

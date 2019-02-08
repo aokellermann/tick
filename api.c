@@ -21,6 +21,8 @@ char api_websites[API_PROVIDER_MAX][URL_MAX_LENGTH] = {
         "URL TBD", "https://www.alphavantage.co/support/#api-key",
         "https://pro.coinmarketcap.com/signup"};
 
+const char usd_slug[SLUG_MAX_LENGTH] = "USD$";
+
 void keys_file_path_init(void) {
     char* home = getenv("HOME");
     char* path = malloc(strlen(home) + 32);
@@ -244,7 +246,7 @@ String* api_iex_get_data_string(char** slug_array, size_t len,
             if (idx == len)
                 break;
 
-            if (!streq(slug_array[idx], "USD$"))
+            if (!streq(slug_array[idx], usd_slug))
                 sprintf(&slug_list_string[i][strlen(slug_list_string[i])], "%s,",
                         slug_array[idx]);
         }
@@ -258,7 +260,7 @@ String* api_iex_get_data_string(char** slug_array, size_t len,
     }
 
     for (size_t i = 0; i < num_partitions; i++)
-        if (!streq(slug_array[i], "USD$") &&
+        if (!streq(slug_array[i], usd_slug) &&
             pthread_join(threads[i], (void**) &string_array[i]))
             EXIT_MSG("Error joining thread!");
 
@@ -452,7 +454,7 @@ void api_store_info_array(Info_Array* pInfo_Array, Data_Level data_level) {
     memset(open_threads, 0, pInfo_Array->length * sizeof(int));
     for (size_t i = 0; i < pInfo_Array->length; i++) {
         pInfo = pInfo_Array->array[i];
-        if (pInfo->api_provider == EMPTY && !streq(pInfo->slug, "USD$")) {
+        if (pInfo->api_provider == EMPTY && !streq(pInfo->slug, usd_slug)) {
             open_threads[i] = 1;
             if (pthread_create(&threads[i], NULL, api_alphavantage_store_info, pInfo))
                 EXIT_MSG("Error creating thread!");
@@ -508,7 +510,7 @@ void api_store_info(Info* pInfo, Data_Level data_level) {
 }
 
 void info_store_portfolio_data(Info* pInfo) {
-    if (!streq(pInfo->slug, "USD$")) {
+    if (!streq(pInfo->slug, usd_slug)) {
         if (pInfo->amount != EMPTY) {
             pInfo->current_value = pInfo->amount * pInfo->price;
             pInfo->profit_total = pInfo->current_value - pInfo->total_spent;

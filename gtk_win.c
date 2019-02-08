@@ -556,6 +556,9 @@ void on_info_peers_tree_view_row_activated(GtkTreeView* tree_view, GtkTreePath* 
 }
 
 void slug_show_info(const char* slug) {
+    if (streq(slug, usd_slug))
+        return;
+
     Info* pInfo = info_array_find_slug_recursive(app.portfolio_data, slug);
     if (pInfo == NULL)
         pInfo = info_array_find_slug_recursive(app.info_cache, slug);

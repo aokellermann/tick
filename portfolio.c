@@ -81,7 +81,7 @@ int portfolio_modify_string(String* pString, const char* slug, double quantity_s
             GOTO_CLEAN_MSG("You don't have any of this security to remove")
         }
 
-        if (!streq("USD$", slug)) { // Check that the slug is valid, except if it's USD
+        if (!streq(slug, usd_slug)) { // Check that the slug is valid, except if it's USD
             Info* data = info_init();
             strcpy(data->slug, slug);
             api_store_info(data, DATA_LEVEL_CHECK);
